@@ -52,13 +52,15 @@ def get_like_count(item):
   return int(item[5])
 
 def get_date_info(item):
-  s = item[0].split("-")
-  return datetime.date(s[0], s[1], s[2])
+  s = item[2].split("-")
+  return datetime.date(int(s[0]), int(s[1]), int(s[2]))
 
 class WeiboReader():
   """
     Read data from train data.
   """
+  # 20% for validation.
+  VADATION_RATION = 0.2 
   def __init__(self):
     self._total_uids = 0
     self._total_mids = 0
@@ -79,6 +81,8 @@ class WeiboReader():
     self._uid_data = {}
     self._wid_set = Set()
     self._is_prediction_data = False
+    self._training_set = None
+    self._validation_set = None
     
     
   def _add_info(self, info):
@@ -164,8 +168,25 @@ class WeiboReader():
       return (total_mid, total_forward, total_comment, total_like, 
               total_zero_forward, total_zero_comment, total_zero_like,
               avg_forward, avg_comment, avg_like)
+
+  def _split_train_validation_sets(self):
+    if self._training_set == None:
+      size = len(self._data)
+      sorted_data = sorted(self._data, key=get_date_info)
+      train_size = int(size * (1 - self.VADATION_RATION))
+      self._training_set = self._data[0:train_size]
+      self._validation_set = self._data[train_size:-1]
+      return True
+    else:
+      return True                
         
-        
+  def get_training_data(self):
+    self._split_train_validation_sets()
+    return self._training_set
+  
+  def get_validation_data(self):
+    self._split_train_validation_sets()
+    return self._validation_set
     
   def load_data(self, filename):
     """
@@ -186,6 +207,61 @@ class WeiboReader():
       
   def get_uid_info(self, uid, is_str = False):
     return self._caclulate_uid_info(self._uid_data[uid], is_str)
+  
+  def print_uid_top_info(self, uid):
+    weibos = sorted(self._uid_data[uid], key=get_date_info)
+    print "===================uid: ", uid, "information=============="
+    for idx, weibo in enumerate(weibos):
+      print "NO", idx, " : ", weibo[0:6], weibo[6]
+      
+    return
+
+  @staticmethod
+  def _count_limit(datas, get_int, limits, counts):
+    for data in datas:
+      count = get_int(data)
+      for idx, limit in enumerate(limits):
+        if count <= limit:
+          counts[idx] += 1
+          break
+    
+      
+      
+  
+  def print_rank_info(self, forward_limits = None, comment_limits = None, 
+                      like_limits = None):
+    default_limits = [0,1,5,10,50,100,500,1000,1500, 2000,3000,5000,10000,20000,
+                      50000,80000,100000, 200000]
+    if forward_limits == None:
+      forward_limits = default_limits
+    if comment_limits == None:
+      comment_limits = default_limits
+    if like_limits == None:
+      like_limits = default_limits
+      
+    # collect all the statistic infos
+    forward_counts = [ 0 for v in forward_limits ]
+    comment_counts = [ 0 for v in comment_limits ]
+    like_counts = [ 0 for v in like_limits ]
+    
+    WeiboReader._count_limit(self._data, get_forward_count, 
+                             forward_limits, forward_counts)
+    WeiboReader._count_limit(self._data, get_comment_count, 
+                             comment_limits, comment_counts)
+    WeiboReader._count_limit(self._data, get_like_count, 
+                             like_limits, like_counts)
+    
+    print "===================rank information=============="
+    print "++  forward counts"
+    for limit, count in zip(forward_limits, forward_counts):
+      print "smaller than", limit, "total: ", count 
+    print "++  comment counts"
+    for limit, count in zip(comment_limits, comment_counts):
+      print "smaller than", limit, "total: ", count
+    print "++  like counts"
+    for limit, count in zip(like_limits, like_counts):
+      print "smaller than", limit, "total: ", count
+        
 
   def print_top_list(self, top_n_info=50, top_n_show_detail_info=50, threshold_hide_general_info=10):
     # sort on forward
