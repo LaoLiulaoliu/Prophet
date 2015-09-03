@@ -188,7 +188,7 @@ class WeiboReader():
     self._split_train_validation_sets()
     return self._validation_set
     
-  def load_data(self, filename):
+  def _load_single_data(self, filename):
     """
       Load the data from file.
     """
@@ -204,6 +204,13 @@ class WeiboReader():
         continue
       
       self._add_info(info)
+      
+  def load_data(self, filenames):
+    if not isinstance(filenames, (list, tuple)):
+      filenames = [filenames]
+    
+    for filename in filenames:
+      self._load_single_data(filename)
       
   def get_uid_info(self, uid, is_str = False):
     return self._caclulate_uid_info(self._uid_data[uid], is_str)
