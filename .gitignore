@@ -1,3 +1,6 @@
 *.txt
 *.pyc
 .DS_Store
+
+segment/.idea
+segment/target
