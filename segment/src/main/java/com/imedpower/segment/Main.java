@@ -47,16 +47,14 @@ public class Main {
 
             while (line != null) {
                 String[] oldWeibo = line.split("\t");
-                parse = NlpAnalysis.parse(oldWeibo[oldWeibo.length - 1]);
+                String weibo = oldWeibo[oldWeibo.length - 1];
+                weibo = weibo.replaceAll(getUrlRegex(), "lliinnkk");
+
+                parse = NlpAnalysis.parse(weibo);
                 List<String> words = new ArrayList<>();
                 for (int i = 0; i < parse.size(); ++i) {
                     Term item = parse.get(i);
                     words.add(item.getRealName());
-                    if (item.getRealName() != item.getName()) {
-                        System.out.println("name: " + item.getName());
-                        System.out.println("realname: " + item.getRealName());
-                        System.out.println("\n");
-                    }
                 }
                 oldWeibo[oldWeibo.length - 1] = words.toString();
                 List<String> newWeibo = java.util.Arrays.asList(oldWeibo);
@@ -69,5 +67,17 @@ public class Main {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static String getUrlRegex() {
+        final String regex = "((https|http|ftp|rtsp|mms)?://)"
+                + "(([0-9]{1,3}\\\\.){3}[0-9]{1,3}"
+                + "|"
+                + "([0-9A-Za-z_!~*'()-]+\\.)*"
+                + "([0-9A-Za-z][0-9A-Za-z-]{0,61})?[0-9A-Za-z]\\."
+                + "[A-Za-z]{2,6})"
+                + "(:[0-9]{1,4})?"
+                + "((/[0-9A-Za-z_!~*'().;?:@&=+$,%#-]+)+/?|(/?))";
+        return regex;
     }
 }
