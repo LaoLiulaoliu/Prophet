@@ -15,17 +15,11 @@ def get_counts(gt):
     return (int(gt[2]),int(gt[3]),int(gt[4]))
 
 def sgn(x):
-  if x > 0:
-    return 1
-  else:
-    return 0
+  return 1 if x > 0 else 0
 
 def count_i(f,c,l):
   total = f + c + l
-  if total > 100:
-    return 100
-  else:
-    return total
+  return 100 if total > 100 else total
 
 class WeiboPrecision():
 
