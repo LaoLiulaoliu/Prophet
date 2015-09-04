@@ -39,7 +39,6 @@ public class Main {
             reader = new InputStreamReader(new FileInputStream(new File(filename)));
             BufferedReader br = new BufferedReader(reader);
             String line = br.readLine();
-            List<Term> parse;
 
             File writefile = new File("out.txt");
             writefile.createNewFile();
@@ -49,13 +48,26 @@ public class Main {
                 String[] oldWeibo = line.split("\t");
                 String weibo = oldWeibo[oldWeibo.length - 1];
                 weibo = weibo.replaceAll(getUrlRegex(), "lliinnkk");
-
-                parse = NlpAnalysis.parse(weibo);
                 List<String> words = new ArrayList<>();
-                for (int i = 0; i < parse.size(); ++i) {
-                    Term item = parse.get(i);
-                    words.add(item.getRealName());
+
+                while (true) {
+                    int begin = weibo.indexOf("[");
+                    if (begin == -1) {
+                        if (!weibo.equals("")) {
+                            words.addAll(parsePhrase(weibo));
+                        }
+                        break;
+                    } else {
+                        String beforeEmoji = weibo.substring(0, begin);
+                        if (!beforeEmoji.equals("")) {
+                            words.addAll(parsePhrase(beforeEmoji));
+                        }
+                        int end = weibo.indexOf("]");
+                        words.add(weibo.substring(begin, end + 1));
+                        weibo = weibo.substring(end + 1);
+                    }
                 }
+
                 oldWeibo[oldWeibo.length - 1] = words.toString();
                 List<String> newWeibo = java.util.Arrays.asList(oldWeibo);
                 String join = StringUtils.join(newWeibo, "\t");
@@ -79,5 +91,41 @@ public class Main {
                 + "(:[0-9]{1,4})?"
                 + "((/[0-9A-Za-z_!~*'().;?:@&=+$,%#-]+)+/?|(/?))";
         return regex;
+    }
+
+    public static List<String> parsePhrase(String phrase) {
+        if (phrase == null || phrase.equals("")) {
+            return null;
+        }
+        List<Term> parse = NlpAnalysis.parse(phrase);
+        List<String> words = new ArrayList<>();
+        for (int i = 0; i < parse.size(); ++i) {
+            Term item = parse.get(i);
+            words.add(item.getRealName());
+        }
+        return words;
+    }
+
+    public static List<String> emojiPatternNlp(String weibo) {
+        List<String> words = new ArrayList<>();
+
+        while (true) {
+            int begin = weibo.indexOf("[");
+            if (begin == -1) {
+                if (!weibo.equals("")) {
+                    words.addAll(parsePhrase(weibo));
+                }
+                break;
+            } else {
+                String beforeEmoji = weibo.substring(0, begin);
+                if (!beforeEmoji.equals("")) {
+                    words.addAll(parsePhrase(beforeEmoji));
+                }
+                int end = weibo.indexOf("]");
+                words.add(weibo.substring(begin, end + 1));
+                weibo = weibo.substring(end + 1);
+            }
+        }
+        return words;
     }
 }
