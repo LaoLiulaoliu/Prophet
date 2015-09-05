@@ -41,37 +41,48 @@ def batch_gradient_descent(X, Y, theta, alpha=0.01, iters=1000):
 
 
 def stochastic_gradient_descent(X, Y, theta, alpha=0.01):
+    m, _ = np.shape(X)
     theta -= alpha/m * (X.T * (X * theta - Y))
     return theta
 
 def train(n=806148):
     cnt = 0
     phase = 1000
-    cost_history = []
-    theta = np.zeros((n-3,1))
+    alpha = 0.001
+    ambit = 0.00001
+    costf_hist, costc_hist, costl_hist = [], [], []
+    thetaf, thetac, thetal = np.zeros((n-3,1)), np.zeros((n-3,1)), np.zeros((n-3,1))
 
     for data in get_train_data():
-        # m, n = len(data), len(data[0])
-        X, Y = [], []
+        X, Yf, Yc, Yl = [], [], [], []
         for i in data:
             X.append( i[:-3] )
-            Y.append( i[-3:] )
-        theta = stochastic_gradient_descent(np.mat(X), np.mat(Y), theta, 0.001)
+            Yf.append( i[-3] )
+            Yc.append( i[-2] )
+            Yl.append( i[-1] )
+        thetaf = stochastic_gradient_descent(np.mat(X), np.mat(Yf).T, thetaf, alpha)
+        thetac = stochastic_gradient_descent(np.mat(X), np.mat(Yc).T, thetaf, alpha)
+        thetal = stochastic_gradient_descent(np.mat(X), np.mat(Yl).T, thetaf, alpha)
 
         cnt += 1
         if cnt == phase:
             cnt = 0
-            cost = cost_function(np.mat(X), np.mat(Y), theta)
-            if cost < 0.00001: break
-            cost_history.append(cost)
-    return theta, cost_history
+            costf = cost_function(np.mat(X), np.mat(Yf).T, thetaf)
+            costc = cost_function(np.mat(X), np.mat(Yc).T, thetac)
+            costl = cost_function(np.mat(X), np.mat(Yl).T, thetal)
+            if costf < ambit and costc < ambit and costl < ambit:
+                break
+            costf_hist.append(costf)
+            costc_hist.append(costc)
+            costl_hist.append(costl)
+    return thetaf, thetac, thetal, costf_hist, costc_hist, costl_hist
 
 
 if __name__ == '__main__':
-    theta, cost_history = train()
-    print(cost_history)
+    result = train()
+    print(result)
 
     import cPickle
     with open('result.dump', 'w') as fd:
-        cPickle.dump((theta, cost_history), fd)
+        cPickle.dump(result, fd)
 
