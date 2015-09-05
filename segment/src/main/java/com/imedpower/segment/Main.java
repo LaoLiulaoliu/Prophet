@@ -7,6 +7,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -44,32 +46,37 @@ public class Main {
             writefile.createNewFile();
             BufferedWriter out = new BufferedWriter(new FileWriter(writefile));
 
+            Pattern namePattern = Pattern.compile(atNameRegex(), Pattern.CASE_INSENSITIVE);
             while (line != null) {
-                String[] oldWeibo = line.split("\t");
-                String weibo = oldWeibo[oldWeibo.length - 1];
-                weibo = weibo.replaceAll(getUrlRegex(), "lliinnkk");
+                String[] oneLine = line.split("\t");
+                String weibo = oneLine[oneLine.length - 1];
                 List<String> words = new ArrayList<>();
 
-                while (true) {
-                    int begin = weibo.indexOf("[");
-                    if (begin == -1) {
-                        if (!weibo.equals("")) {
-                            words.addAll(parsePhrase(weibo));
-                        }
-                        break;
-                    } else {
-                        String beforeEmoji = weibo.substring(0, begin);
-                        if (!beforeEmoji.equals("")) {
-                            words.addAll(parsePhrase(beforeEmoji));
-                        }
-                        int end = weibo.indexOf("]");
-                        words.add(weibo.substring(begin, end + 1));
-                        weibo = weibo.substring(end + 1);
+                //replaceAll http link to lliinnkk
+                weibo = weibo.replaceAll(urlRegex(), " lliinnkk ");
+
+                //remember @name content, replace nnaammee back to @name content later
+                List<String> atNames = new ArrayList<>();
+                Matcher m = namePattern.matcher(weibo);
+                while (m.find()) {
+                    atNames.add(m.group(1));
+                }
+                //replaceAll @name to nnaammee
+                weibo = weibo.replaceAll(atNameRegex(), " nnaammee ");
+
+                //separate emoji pattern from words, analysis
+                words.addAll( emojiPatternNlp(weibo) );
+
+                //replace nnaammee back to @name content
+                for (int i = 0, j = 0; i < words.size(); i++) {
+                    if (words.get(i).equals("nnaammee")) {
+                        words.set(i, atNames.get(j));
+                        j++;
                     }
                 }
 
-                oldWeibo[oldWeibo.length - 1] = words.toString();
-                List<String> newWeibo = java.util.Arrays.asList(oldWeibo);
+                oneLine[oneLine.length - 1] = words.toString();
+                List<String> newWeibo = java.util.Arrays.asList(oneLine);
                 String join = StringUtils.join(newWeibo, "\t");
                 out.write(join + "\n");
                 line = br.readLine();
@@ -81,7 +88,7 @@ public class Main {
         }
     }
 
-    public static String getUrlRegex() {
+    public static String urlRegex() {
         final String regex = "((https|http|ftp|rtsp|mms)?://)"
                 + "(([0-9]{1,3}\\\\.){3}[0-9]{1,3}"
                 + "|"
@@ -90,6 +97,11 @@ public class Main {
                 + "[A-Za-z]{2,6})"
                 + "(:[0-9]{1,4})?"
                 + "((/[0-9A-Za-z_!~*'().;?:@&=+$,%#-]+)+/?|(/?))";
+        return regex;
+    }
+
+    public static String atNameRegex() {
+        final String regex = "(@[a-zA-Z0-9\\u4E00-\\u9FA5]+)( |$|）)";
         return regex;
     }
 
