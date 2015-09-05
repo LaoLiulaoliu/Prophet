@@ -21,10 +21,30 @@ def count_i(f,c,l):
   total = f + c + l
   return 100 if total > 100 else total
 
+def get_first_three(item):
+  return (item[0], item[1], item[2])
+
 class WeiboPrecision():
 
   def __init__(self):
     pass
+
+  @staticmethod
+  def precision_match(groundtruth, predictions):
+    g_precision_top = 0.0
+    g_precision_bt = 0.0
+    
+    for pre, gt in zip(predictions, groundtruth):
+      forward_gt, comment_gt, like_gt = get_first_three(gt)
+      forward_pre, comment_pre, like_pre = get_first_three(pre)
+      f_dev = abs(forward_pre - forward_gt) / (forward_gt + 5.0)
+      c_dev = abs(comment_pre - comment_gt) / (comment_gt + 3.0)
+      l_dev = abs(like_pre - like_gt) / (like_gt + 3.0)
+      single_precision = 1 - 0.5 * f_dev - 0.25 * c_dev - 0.25 * l_dev
+      counti = count_i(forward_gt, comment_gt, like_gt)
+      g_precision_top += (counti + 1.0) * sgn(single_precision - 0.8)
+      g_precision_bt += (counti + 1.0)
+    return g_precision_top / g_precision_bt
 
   @staticmethod
   def precision(groundtruth, predictions):
