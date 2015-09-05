@@ -25,19 +25,21 @@ class WordVec(object):
         return words, Y
 
     def unique_word(self, words):
-        word_set = set()
+        word_dict = defaultdict(dict)
         for i, word_list in words.iteritems():
-            word_set.update(word_list)
-        return list(word_set)
+            for word in word_list:
+                if word not in word_dict:
+                    word_dict[word] = len(word_dict)
+        return word_dict
 
-    def bag_word(self, words, word_set_list, Y=None):
-        word_set_len = len(word_set_list)
+    def bag_word(self, words, word_dict, Y=None):
+        word_set_len = len(word_dict)
         bag_words = []
 
         for i, word_list in words.iteritems():
             one_bag = [0] * word_set_len
             for word in word_list:
-                one_bag[word_set_list.index(word)] += 1
+                one_bag[word_dict[word]] += 1
             if Y:
                 one_bag.extend(Y[i])
             bag_words.append(one_bag)
@@ -45,12 +47,45 @@ class WordVec(object):
 
     def prime_data(self):
         words, Y = self.load_words()
-        word_set_list = self.unique_word(words)
-        bag_words = self.bag_word(words, word_set_list, Y)
+        word_dict = self.unique_word(words)
+        bag_words = self.bag_word(words, word_dict, Y)
         return bag_words
+
+
+
+    def generator_bag_word(self, words, word_dict, Y=None):
+        word_set_len = len(word_dict)
+
+        for i, word_list in words.iteritems():
+            one_bag = [0] * word_set_len
+            for word in word_list:
+                one_bag[word_dict[word]] += 1
+            if Y:
+                one_bag.extend(Y[i])
+            yield one_bag
+
+    def generator_data(self, batch_num=10):
+        words, Y = self.load_words()
+        word_dict = self.unique_word(words)
+        one_bag = self.generator_bag_word(words, word_dict, Y)
+
+        finish_flag = 0
+        while finish_flag == 0:
+            bags = []
+            for i in range(batch_num):
+                try:
+                    one = one_bag.next()
+                    bags.append(one)
+                except:
+                    finish_flag = 1
+                    if bags != []: yield bags
+                    break
+            else:
+                yield bags
+
 
 if __name__ == '__main__':
     obj = WordVec('../data/weibo_train_participle.txt')
-    bag_words = obj.prime_data()
-    print(bag_words[:10])
+    bags = obj.generator_data()
+    bags.next()
 

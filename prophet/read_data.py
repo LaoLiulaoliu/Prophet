@@ -5,28 +5,33 @@
 from __future__ import print_function, division
 
 from word_vec import WordVec
-import numpy as np
 
+TOTAL = 1626750
 PROPORTION=0.7
+BATCH = 50
 
 def get_train_data():
+    train_data_len = int(TOTAL * PROPORTION)
+    train_iter_times = train_data_len // BATCH
+
     wordvec = WordVec()
-    bag_words = np.mat(wordvec.prime_data())
-    m, n = np.shape(bag_words)
-    train_data_len = int(m * PROPORTION)
-    validation_data_len = m - tran_data_len
+    for bags in wordvec.generator_data(BATCH):
+        yield bags
+        train_iter_times -= 1
+        if train_iter_times == 0: break
 
-    data_idx = np.arange(m)
-    np.random.shuffle(data_idx)
-
-    return bag_words[data_idx[:train_data_len], :], bag_words[data_idx[train_data_len:], :]
 
 def get_validation_data():
-    pass
+    train_data_len = int(TOTAL * PROPORTION)
+    train_iter_times = train_data_len // BATCH
+
+    wordvec = WordVec()
+    for bags in wordvec.generator_data(BATCH):
+        train_iter_times -= 1
+        if train_iter_times <= 0:
+            yield bags
+
 
 def get_data():
     pass
 
-
-train, validation = get_train_data()
-print(train[:10])
