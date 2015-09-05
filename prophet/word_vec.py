@@ -9,7 +9,9 @@ from collections import defaultdict
 
 
 class WordVec(object):
-    def __init__(self, filename):
+    def __init__(self, filename=None):
+        if filename is None:
+            filename = '../data/weibo_train_participle.txt'
         self.filename = filename
 
     def load_words(self):
