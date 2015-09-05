@@ -47,6 +47,7 @@ public class Main {
             BufferedWriter out = new BufferedWriter(new FileWriter(writefile));
 
             Pattern namePattern = Pattern.compile(atNameRegex(), Pattern.CASE_INSENSITIVE);
+            Pattern emojiPattern = Pattern.compile(emojiRegex(), Pattern.CASE_INSENSITIVE);
             while (line != null) {
                 String[] oneLine = line.split("\t");
                 String weibo = oneLine[oneLine.length - 1];
@@ -57,21 +58,34 @@ public class Main {
 
                 //remember @name content, replace nnaammee back to @name content later
                 List<String> atNames = new ArrayList<>();
-                Matcher m = namePattern.matcher(weibo);
-                while (m.find()) {
-                    atNames.add(m.group(1));
+                Matcher mn = namePattern.matcher(weibo);
+                while (mn.find()) {
+                    atNames.add(mn.group(1));
                 }
-                //replaceAll @name to nnaammee
+
+                //remember emoji content, replace eemmoojjii back to emoji content later
+                List<String> emojis = new ArrayList<>();
+                Matcher me = emojiPattern.matcher(weibo);
+                while (me.find()) {
+                    emojis.add(me.group());
+                }
+
+                //replaceAll @name to nnaammee, [emoji] to eemmoojjii
                 weibo = weibo.replaceAll(atNameRegex(), " nnaammee ");
+                weibo = weibo.replaceAll(emojiRegex(), " eemmoojjii ");
 
                 //separate emoji pattern from words, analysis
-                words.addAll( emojiPatternNlp(weibo) );
+                words.addAll( parsePhrase(weibo) );
 
                 //replace nnaammee back to @name content
-                for (int i = 0, j = 0; i < words.size(); i++) {
+                //replace eemmoojjii back to emoji content
+                for (int i = 0, j = 0, k = 0; i < words.size(); i++) {
                     if (words.get(i).equals("nnaammee")) {
                         words.set(i, atNames.get(j));
                         j++;
+                    } else if (words.get(i).equals("eemmoojjii")) {
+                        words.set(i, emojis.get(k));
+                        k++;
                     }
                 }
 
@@ -105,6 +119,11 @@ public class Main {
         return regex;
     }
 
+    public static String emojiRegex() {
+        final String regex = "(\\[[a-zA-Z0-9\\u4E00-\\u9FA5]+?\\])";
+        return regex;
+    }
+
     public static List<String> parsePhrase(String phrase) {
         if (phrase == null || phrase.equals("")) {
             return null;
@@ -133,9 +152,14 @@ public class Main {
                 if (!beforeEmoji.equals("")) {
                     words.addAll(parsePhrase(beforeEmoji));
                 }
-                int end = weibo.indexOf("]");
-                words.add(weibo.substring(begin, end + 1));
-                weibo = weibo.substring(end + 1);
+                int end = weibo.indexOf("]", begin+1);
+                if (end == -1 || weibo.indexOf("[", begin+1) < end) {
+                    //[] not match, or [[]] embedded
+                    weibo = weibo.substring(begin + 1);
+                } else {
+                    words.add(weibo.substring(begin, end + 1));
+                    weibo = weibo.substring(end + 1);
+                }
             }
         }
         return words;
