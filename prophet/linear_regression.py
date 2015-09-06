@@ -5,7 +5,7 @@
 from __future__ import print_function, division
 import numpy as np
 
-from read_data import get_train_data
+from read_data import get_train_data, BATCH
 
 
 def cost_function(X, Y, theta):
@@ -45,13 +45,14 @@ def stochastic_gradient_descent(X, Y, theta, alpha=0.01):
     theta -= alpha/m * (X.T * (X * theta - Y))
     return theta
 
-def train(n=806148):
+def train(N=806148):
     cnt = 0
-    phase = 1000
+    phase = 0
+    limit = 1000
     alpha = 0.001
     ambit = 0.00001
     costf_hist, costc_hist, costl_hist = [], [], []
-    thetaf, thetac, thetal = np.zeros((n-3,1)), np.zeros((n-3,1)), np.zeros((n-3,1))
+    thetaf, thetac, thetal = np.zeros((N-3,1)), np.zeros((N-3,1)), np.zeros((N-3,1))
 
     for data in get_train_data():
         X, Yf, Yc, Yl = [], [], [], []
@@ -65,8 +66,10 @@ def train(n=806148):
         thetal = stochastic_gradient_descent(np.mat(X), np.mat(Yl).T, thetaf, alpha)
 
         cnt += 1
-        if cnt == phase:
+        if cnt == limit:
             cnt = 0
+            phase += 1000 * BATCH
+            print('Already train {}, {} of all.'.format(phase, phase/N))
             costf = cost_function(np.mat(X), np.mat(Yf).T, thetaf)
             costc = cost_function(np.mat(X), np.mat(Yc).T, thetac)
             costl = cost_function(np.mat(X), np.mat(Yl).T, thetal)
