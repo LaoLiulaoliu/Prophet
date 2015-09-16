@@ -83,7 +83,9 @@ class WeiboReader():
     self._is_prediction_data = False
     self._training_set = None
     self._validation_set = None
-    
+
+  def data(self):
+    return self._data
     
   def _add_info(self, info):
     
@@ -211,6 +213,14 @@ class WeiboReader():
     
     for filename in filenames:
       self._load_single_data(filename)
+      
+  def save_data(self, predictions, filename):
+    fd = open(filename, 'w')
+    
+    for info, pre in zip(self._data, predictions):
+      fd.write("%s %s %d,%d,%d\n" % (info[0], info[1], pre[0], pre[1], pre[2]))
+      
+    fd.close()
       
   def get_uid_info(self, uid, is_str = False):
     return self._caclulate_uid_info(self._uid_data[uid], is_str)
