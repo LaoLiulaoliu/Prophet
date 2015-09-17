@@ -10,7 +10,12 @@ def get_text(filename):
     content = []
     with open(filename) as fd:
         for line in fd:
-            text = '\\'.join( line.split('\t')[6:] )
+            l_s = line.split('\t')
+            if len(l_s) > 4:
+                l_s = l_s[6:]
+            else:
+                l_s = l_s[3:]
+            text = '\\'.join(l_s)
             content.append(text)
     return content
 
