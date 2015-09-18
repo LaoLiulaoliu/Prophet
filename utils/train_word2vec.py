@@ -99,6 +99,9 @@ if __name__ == '__main__':
         logger.info("Train phrases")
         for i in range(0, phrases):
             phrases_list.append(Phrases(get_phrase_list(phrases_list, i, sentences)))
+        logger.info("Saving phrases")
+        for idx, ph in enumerate(phrases_list):
+            ph.save(args.output+".phrase"+str(idx))
         logger.info("Replace sentences with phrases")
         sentences = get_phrase_list(phrases_list, phrases-1, sentences)
 
