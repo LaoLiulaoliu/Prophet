@@ -18,7 +18,7 @@ import multiprocessing
 
 vec_size=200
 window_size=5
-min_count=5
+min_count=1
 workers=multiprocessing.cpu_count()
 phrases=0
 is_document=False
