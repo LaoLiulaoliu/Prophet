@@ -218,7 +218,7 @@ class WeiboReader():
     fd = open(filename, 'w')
     
     for info, pre in zip(self._data, predictions):
-      fd.write("%s %s %d,%d,%d\n" % (info[0], info[1], pre[0], pre[1], pre[2]))
+      fd.write("%s %s %d,%d,%d\n" % (info[0], info[1], int(pre[0]), int(pre[1]), int(pre[2])))
       
     fd.close()
       
