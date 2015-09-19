@@ -4,3 +4,5 @@
 
 segment/.idea
 segment/target
+data
+gen_data

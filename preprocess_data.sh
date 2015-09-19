@@ -8,7 +8,12 @@ fi
 ZH_TEXT="${dst_path}/wiki.zh.text"
 ZH_TEXT_JIAN="${dst_path}/wiki.zh.text.jian"
 CONV_CONF="zht2zhs.ini"
-Bin="env/bin"
+
+if [[ `uname` == 'Darwin' ]]; then
+    Bin="/usr/local/bin"
+else
+    Bin="env/bin"
+fi
 
 Sogou="${data_path}/sougou"
 sogou_all_in_one="${dst_path}/sougou_all_in_one"
