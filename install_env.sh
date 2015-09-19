@@ -3,7 +3,7 @@
 
 #sudo apt-get install libatlas-base-dev gfortran
 
-Bin="env/bin"
+Bin="`pwd`/env/bin"
 
 if ! test -d "$Bin" ; then
 	virtualenv -p /usr/bin/python env
@@ -20,3 +20,15 @@ if ! test -d "library" ; then
 	cp -r ansj_seg/library ./
 fi
 
+
+if ! test -d "lib" ; then
+	mkdir lib
+fi
+
+if ! test -d "lib/keras" ; then
+	(cd lib; git clone https://github.com/fchollet/keras.git)
+fi
+if test -d "lib/keras" ; then
+        #(cd lib/keras; ${Bin}/python setup.py install)
+	${Bin}/pip install keras
+fi
