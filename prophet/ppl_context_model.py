@@ -18,6 +18,7 @@ from prophet.weibo_reader import WeiboReader
 from prophet.metric import WeiboPrecision
 from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted
 from keras.callbacks import ModelCheckpoint
+from prophet.ppl_idx_table import PplIdxTable
 
 max_features = 1000000  # vocabulary size: top 50,000 most common words in data
 skip_top = 0  # ignore top 100 most common words
@@ -44,49 +45,34 @@ train_data = reader.get_training_data()
 #train_data = reader._data
 train_gt = np.array([[info[3], info[4], info[5]] for info in train_data], dtype='float32')
 # setup ppl to id indexing.
-ppl_idx_table = {}
-print("first uid: %s" % train_data[0][0])
-for info in train_data:
-  ppl_id = info[0]
-  if ppl_id not in ppl_idx_table:
-    ppl_idx_table[ppl_id] = len(ppl_idx_table)
-    
+idx_table = PplIdxTable()
+print("traing data size: %d, first uid: %s" % (len(train_data), train_data[0][0]))
+idx_table.create_ppls_table(train_data, lambda info: info[0])
+print("idx table has %d numbers, 07fc721342df1a4c1992560b582992f8 idx is: %d" %(idx_table.get_table_idx(), idx_table.get_ppl_idx("07fc721342df1a4c1992560b582992f8")))
 
-train_ppl = np.array([[ppl_idx_table[info[0]]] for info in train_data ], dtype='int' )
+
+train_ppl = np.array( idx_table.get_ppls_idx(train_data, lambda info: info[0]), dtype='int' )
 
 val_data = reader.get_validation_data()
 val_gt = np.array([[info[3], info[4], info[5]] for info in val_data], dtype='float32')
 # default empty user using: 07fc721342df1a4c1992560b582992f8 vector
 val_ppl = []
-missing = {}
-for info in val_data:
-  ppl_id = info[0]
-  if ppl_id in ppl_idx_table:
-    val_ppl.append([ppl_idx_table[ppl_id]])
-  else:
-    #print("-- user id: %s is missing in index table" % ppl_id)
-    missing[ppl_id] = 1
-    val_ppl.append([0])
-print("-- missing %d users" % len(missing))
-val_ppl = np.array(val_ppl, dtype='float32')
-    
+idx_table.reset_missing()
+val_ppl = np.array(idx_table.get_ppls_idx(val_data, lambda info: info[0], 
+                    muid='07fc721342df1a4c1992560b582992f8'), dtype='int')
+print("-- validation data missing %d users" % idx_table.get_missing_uniq_ppl())
+idx_table.reset_missing()
+
 rd2 = WeiboReader()
 rd2.load_data("./data/weibo_predict_data.txt")
 predict_data = rd2._data
 predict_ppl = []
-missing = {}
-for info in predict_data:
-  ppl_id = info[0]
-  if ppl_id not in ppl_idx_table:
-    missing[ppl_id] = 1
-    predict_ppl.append([0])
-  else:
-    predict_ppl.append([ppl_idx_table[ppl_id]])
-predict_ppl = np.array(predict_ppl, dtype='float32')
+predict_ppl = np.array(idx_table.get_ppls_idx(predict_data, lambda info: info[0], 
+                                              muid='07fc721342df1a4c1992560b582992f8'), dtype='int')
 
-print("-- predict data missing %d users" % len(missing))
+print("-- predict data missing %d users" % idx_table.get_missing_uniq_ppl())
   
-max_features = len(ppl_idx_table)
+max_features = idx_table.get_table_idx()
 
 print('Build model...')
 model = Sequential()
@@ -96,12 +82,13 @@ model.add(Dense(dim_proj, dim_output, init="uniform", activation="linear",
                 W_regularizer=l2(0.01)))
 #model.compile(loss=weibo_loss, optimizer='rmsprop')
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+#sgd = SGD(lr=2, decay=1e-6, momentum=0.9, nesterov=True)
 #use weibo_loss_weighted with learning rate 2 is good.
 #model.compile(loss=weibo_loss_weighted, optimizer=sgd)
 model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd)
 
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state.full_t.10.f10.pkl", save_best_only=False)
-model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=10, show_accuracy=True, callbacks=[checkpoint])
+model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=100, show_accuracy=True, callbacks=[checkpoint])
 train_pre=model.predict(train_ppl, batch_size=128)
 print("traing weibo acc: ", WeiboPrecision.precision_match(train_gt, train_pre))
 
