@@ -115,7 +115,7 @@ public class Main {
     }
 
     public static String atNameRegex() {
-        final String regex = "(@[a-zA-Z0-9\\u4E00-\\u9FA5]+)( |$|）)";
+        final String regex = "(@[a-zA-Z0-9\\u4E00-\\u9FA5]+)( |$|\\)|）)";
         return regex;
     }
 
