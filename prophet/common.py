@@ -48,13 +48,14 @@ def build_precisio_stack(y_train, y):
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):
-  def __init__(self, n_epoch_training = 10):
+  def __init__(self, n_epoch_training = 10, n_epoch_test = 5):
     super(WeiboPrecisionCallback, self).__init__()
     self._top_count = 0
     self._bottom_count = 0
     self._y_pred = []
     self._y = []
     self._n_epoch_training = n_epoch_training
+    self._n_epoch_test = n_epoch_test
      
   def on_epoch_begin(self, epoch, logs={}):
     self._top_count = 0
@@ -67,7 +68,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     # update the precision.
     #print("On %d epoch, the precision is: %.4f" % (epoch, precision))
     is_val_on = False
-    if 'val_more_func_0' in logs:
+    if 'val_more_func_0' in logs and epoch % self._n_epoch_test == 0:
       is_val_on = True
     is_train_on = False
     if epoch % self._n_epoch_training == 0:
@@ -91,8 +92,8 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
       precision_val_non_round = me.WeiboPrecision.precision_match(logs['val_more_func_1'], logs['val_more_func_0'])
       end_val = time.time()
       print("On %d epoch, the %s precision is: %.4f, non-round: %.4f, calcuating time: %f" % (epoch, "validation", precision_val, precision_val_non_round, end_val-start_val))
-      f=theano.function([], weibo_loss_scaled_weighted(np.array(logs['val_more_func_1']), np.array(logs['val_more_func_0'])))
-      print(f().mean())
+      #f=theano.function([], weibo_loss_scaled_weighted(np.array(logs['val_more_func_1']), np.array(logs['val_more_func_0'])))
+      #print(f().mean())
 
     if not is_train_on:
       return  
