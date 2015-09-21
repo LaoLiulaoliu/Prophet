@@ -10,6 +10,7 @@ import os
 from sets import Set
 import operator
 import datetime
+import string
 
 def comp_forward_count(item1, item2):
   int1 = int(item1[3])
@@ -55,6 +56,82 @@ def get_date_info(item):
   s = item[2].split("-")
   return datetime.date(int(s[0]), int(s[1]), int(s[2]))
 
+banlist=Set()
+#banlist.add(".")
+banlist.add(",")
+#banlist.add("*")
+banlist.add("-")
+banlist.add("!")
+banlist.add("`")
+banlist.add("(")
+banlist.add(u"●".encode('utf-8'))
+banlist.add("'")
+banlist.add("◡")
+banlist.add("'")
+banlist.add(")")
+banlist.add(u"、".encode('utf-8'))
+banlist.add("f")
+banlist.add(u"。".encode('utf-8'))
+banlist.add("+")
+banlist.add("[")
+banlist.add("]")
+banlist.add("_")
+banlist.add("~")
+banlist.add("\\")
+banlist.add("u")
+banlist.add("6211")
+#banlist.add("521")
+banlist.add("53")
+banlist.add("d")
+banlist.add("73")
+banlist.add("86")
+banlist.add("7279")
+banlist.add("522")
+banlist.add("6709")
+banlist.add("7684")
+banlist.add("69")
+banlist.add("59")
+banlist.add("ee")
+banlist.add("3010")
+banlist.add("3002")
+banlist.add(u"，".encode('utf-8'))
+banlist.add(u"！".encode('utf-8'))
+#banlist.add("#")
+#banlist.add("?")
+
+def uniq(in_list):
+  last = None
+  new_list = []
+  for item in in_list:
+    if item == last:
+      continue
+    else:
+      new_list.append(item)
+      last = item
+  return new_list
+
+def load_words(filename, words=None):
+  if words is None:
+    words = []
+  with open(filename) as fd:
+    for line in fd:
+      start = 0
+      if line[0] == '[':
+        start=1
+      end = -1
+      if line[-1] == ']':
+        end = -1
+      if line[-2] == ']' and line[-1] == '\n':
+        end = -2
+      if line[-1] == '\t' and line[-2] == '\r' and line[-3] == ']':
+        end = -3
+      sentence = filter(lambda x: x != '', map(string.strip, line[start:end].split(',')))
+      sentence = [ word for word in sentence if word not in banlist ]
+      sentence = uniq(sentence)
+      words.append(sentence)
+  return words
+
+
 class WeiboReader():
   """
     Read data from train data.
@@ -83,6 +160,7 @@ class WeiboReader():
     self._is_prediction_data = False
     self._training_set = None
     self._validation_set = None
+    self._is_include_words = None
 
   def data(self):
     return self._data
@@ -213,6 +291,30 @@ class WeiboReader():
     
     for filename in filenames:
       self._load_single_data(filename)
+
+  def _attach_words(self, words):
+    for info, word in zip(self._data, words):
+      info.append(word)
+    
+    
+  def _load_single_words_data(self, filename, words_filename):
+    """
+      Load data and mapped words to replace the content field of the data.
+    """
+    if not os.path.isfile(filename) or not os.path.isfile(words_filename):
+      return False
+    
+    self._load_single_data(filename)
+    words = load_words(words_filename)
+    self._attach_words(words)
+      
+          
+  def load_words_data(self, filenames, words_filenames):
+    if not isinstance(filenames, (list, tuple)):
+      filenames = [filenames]
+      words_filenames = [words_filenames]
+    for filename, words_filenames in zip(filenames, words_filenames):
+      self._load_single_words_data(filename, words_filenames)
       
   def save_data(self, predictions, filename):
     fd = open(filename, 'w')
