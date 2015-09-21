@@ -16,7 +16,7 @@ from keras.utils import np_utils, generic_utils
 from keras.regularizers import l2
 from prophet.weibo_reader import WeiboReader
 from prophet.metric import WeiboPrecision
-from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted
+from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, WeiboPrecisionCallback, build_precisio_stack
 from keras.callbacks import ModelCheckpoint
 from prophet.ppl_idx_table import PplIdxTable
 from keras.layers.recurrent import LSTM
@@ -116,20 +116,16 @@ model.add(Dense(2048, 2048, init='uniform', activation="tanh",
 model.add(Dense(2048, 3, init="uniform", activation="linear",
                 W_regularizer=l2(0.01)))
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd)
+model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
 #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
 print("Traing the model")
 checkpoint = ModelCheckpoint(save_dir+"/content_context_state.full_t.pkl", save_best_only=False)
 #print(train_words[0])
 print(train_words[0][0])
-model.fit(train_words, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint])
-train_pre=model.predict(train_words, batch_size=128)
-print("traing weibo acc: ", WeiboPrecision.precision_match(train_gt, train_pre))
+precision = WeiboPrecisionCallback()
+model.fit(train_words, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_words, val_gt))
 
-print("validation acc: ", model.evaluate(val_words, val_gt, 128, show_accuracy=True))
-pre=model.predict(val_words, batch_size=128)
-print("validation weibo acc: ", WeiboPrecision.precision_match(val_gt, pre))
 print("predict shape: ", predict_words.shape)
 pre=model.predict(predict_words, batch_size=128)
 reader_pre.save_data(pre, './ppl_result.txt')
