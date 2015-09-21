@@ -12,6 +12,7 @@ fi
 ${Bin}/pip install --upgrade pip
 ${Bin}/pip install Cython
 ${Bin}/pip install scipy==0.15.1
+${Bin}/pip install h5py
 ${Bin}/pip install gensim
 
 
@@ -26,9 +27,9 @@ if ! test -d "lib" ; then
 fi
 
 if ! test -d "lib/keras" ; then
-	(cd lib; git clone https://github.com/fchollet/keras.git)
+	(cd lib; git clone https://github.com/dxj19831029/keras)
 fi
 if test -d "lib/keras" ; then
-        #(cd lib/keras; ${Bin}/python setup.py install)
-	${Bin}/pip install keras
+        (cd lib/keras; ${Bin}/python setup.py install)
+	#${Bin}/pip install keras
 fi
