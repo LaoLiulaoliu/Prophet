@@ -14,11 +14,12 @@ from keras.models import Sequential
 from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.utils import np_utils, generic_utils
 from keras.regularizers import l2
-from prophet.weibo_reader import WeiboReader
+
 from prophet.metric import WeiboPrecision
 from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, build_percision_funcs, WeiboPrecisionCallback, build_precisio_stack
 from keras.callbacks import ModelCheckpoint
-from prophet.ppl_idx_table import PplIdxTable
+
+from prophet.data import WeiboDataset
 
 max_features = 1000000  # vocabulary size: top 50,000 most common words in data
 skip_top = 0  # ignore top 100 most common words
@@ -36,43 +37,24 @@ if not os.path.exists(save_dir):
 model_load_fname = "ppl_context.pkl"
 model_save_fname = "ppl_context.pkl"
 
-
-
 print('Loading the data...')
-reader = WeiboReader()
-reader.load_data("./data/weibo_train_data.txt")
-train_data = reader.get_training_data()
-#train_data = reader._data
-train_gt = np.array([[info[3], info[4], info[5]] for info in train_data], dtype='float32')
-# setup ppl to id indexing.
-idx_table = PplIdxTable()
-print("traing data size: %d, first uid: %s" % (len(train_data), train_data[0][0]))
-idx_table.create_ppls_table(train_data, lambda info: info[0])
-print("idx table has %d numbers, 07fc721342df1a4c1992560b582992f8 idx is: %d" %(idx_table.get_table_idx(), idx_table.get_ppl_idx("07fc721342df1a4c1992560b582992f8")))
+data = WeiboDataset()
+data.load_data("./data/weibo_train_data.txt", "./data/weibo_predict_data.txt")
 
 
-train_ppl = np.array( idx_table.get_ppls_idx(train_data, lambda info: info[0]), dtype='int' )
+train_gt = data.get_training_data_gt_np()
+train_ppl = data.get_ppl_training_data_np()
+val_gt = data.get_validation_data_gt_np()
+val_ppl = data.get_ppl_validation_data_np()
 
-val_data = reader.get_validation_data()
-val_gt = np.array([[info[3], info[4], info[5]] for info in val_data], dtype='float32')
-# default empty user using: 07fc721342df1a4c1992560b582992f8 vector
-val_ppl = []
-idx_table.reset_missing()
-val_ppl = np.array(idx_table.get_ppls_idx(val_data, lambda info: info[0], 
-                    muid='07fc721342df1a4c1992560b582992f8'), dtype='int')
-print("-- validation data missing %d users" % idx_table.get_missing_uniq_ppl())
-idx_table.reset_missing()
+predict_ppl = data.get_ppl_predict_data_np()
 
-rd2 = WeiboReader()
-rd2.load_data("./data/weibo_predict_data.txt")
-predict_data = rd2._data
-predict_ppl = []
-predict_ppl = np.array(idx_table.get_ppls_idx(predict_data, lambda info: info[0], 
-                                              muid='07fc721342df1a4c1992560b582992f8'), dtype='int')
+missing_info = data.get_missing_info(is_max_len=False)
 
-print("-- predict data missing %d users" % idx_table.get_missing_uniq_ppl())
+print("-- validation missing %d users, %d weibo" % (missing_info['val'], missing_info['val_c']))
+print("-- predict data missing %d users, %d weibo" % (missing_info['pre'], missing_info['pre_c']))
   
-max_features = idx_table.get_table_idx()
+max_features = data.get_ppl_max_count()
 
 print('Build model...')
 model = Sequential()
@@ -96,7 +78,7 @@ pre=model.predict(val_ppl, batch_size=128)
 print("validation weibo acc: ", WeiboPrecision.precision_match(val_gt, pre))
 
 pre=model.predict(predict_ppl, batch_size=128)
-rd2.save_data(pre, './ppl_result.txt')
+data.save_predictions(pre, './ppl_result.txt')
 exit(1)
 #print(train_ppl)
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state1.pkl", save_best_only=False)
