@@ -66,14 +66,15 @@ if not os.path.exists(save_dir):
 dataset = WeiboDataset()
 print('Loading the data...')
 dataset.load_data(
-             ("./data/weibo_train_data.txt", "./gen_data/weibo_train_data_text.txt.jian.words"),
-             ("./data/weibo_predict_data.txt", "./gen_data/weibo_predict_data_text.txt.jian.words")
+             ("./data2/weibo_train_data.txt", "./gen_data2/weibo_train_data_text.txt.jian.words"),
+             ("./data2/weibo_predict_data.txt", "./gen_data2/weibo_predict_data_text.txt.jian.words")
              )
 print('Loading word vector model')
-word_vec_filename="./gen_model/vec_state_s100_p0_w5_t1.all"
-dataset.load_words_vec(word_vec_filename, max_len=20)
+word_vec_filename="./gen_model2/vec_state_s100_p1_w5_t1.all"
+phrase_filenames="./gen_model2/vec_state_s100_p1_w5_t1.all.phrase0"
+dataset.load_words_vec(word_vec_filename, phrase_filenames, max_len=20)
 
-
+print('Generating training/validation/predicting data')
 train_gt = dataset.get_training_data_gt_np()
 val_gt = dataset.get_validation_data_gt_np()
 print("The max len of words is: ", dataset.get_missing_info(is_valid=False, is_predict=False, is_max_len=True))
