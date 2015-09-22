@@ -107,13 +107,13 @@ predict_words = np.array([collect_words_vec(word_model, info[4], max_word_len) f
 
 print('Building the model')
 model = Sequential()
-model.add(LSTM(100, 1024, return_sequences=True))  # try using a GRU instead, for fun
+model.add(LSTM(100, 512, return_sequences=True))  # try using a GRU instead, for fun
 model.add(Dropout(0.5))
-model.add(LSTM(1024, 2048, return_sequences=False))
+model.add(LSTM(512, 512, return_sequences=False))
 model.add(Dropout(0.6))
-model.add(Dense(2048, 2048, init='uniform', activation="tanh",
+model.add(Dense(512, 1024, init='uniform', activation="linear",
                 W_regularizer=l2(0.01)))
-model.add(Dense(2048, 3, init="uniform", activation="linear",
+model.add(Dense(1024, 3, init="uniform", activation="linear",
                 W_regularizer=l2(0.01)))
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
@@ -124,7 +124,7 @@ checkpoint = ModelCheckpoint(save_dir+"/content_context_state.full_t.pkl", save_
 #print(train_words[0])
 print(train_words[0][0])
 precision = WeiboPrecisionCallback()
-model.fit(train_words, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_words, val_gt))
+model.fit(train_words, train_gt, batch_size=256, nb_epoch=121, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_words, val_gt))
 
 print("predict shape: ", predict_words.shape)
 pre=model.predict(predict_words, batch_size=128)
