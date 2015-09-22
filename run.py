@@ -30,6 +30,11 @@ predict_data = rd2._data
 idx_table.get_ppls_idx(predict_data, lambda info: info[0])
 print("-- predict data missing %d users" % idx_table.get_missing_uniq_ppl())
 
+idx_table.create_ppls_table(val_data, lambda info: info[0])
+idx_table.reset_missing()
+idx_table.get_ppls_idx(predict_data, lambda info: info[0])
+print("-- with all training data, predict data missing %d users" % idx_table.get_missing_uniq_ppl())
+
 #reader = prophet.WeiboReader()
 #reader.load_data("./data/weibo_predict_data.txt")
 #data_list = reader.data()
