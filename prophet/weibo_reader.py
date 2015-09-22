@@ -53,8 +53,15 @@ def get_like_count(item):
   return int(item[5])
 
 def get_date_info(item):
-  s = item[2].split("-")
-  return datetime.date(int(s[0]), int(s[1]), int(s[2]))
+  t_list = item[2].split(" ")
+  if len(t_list) > 1:
+    # date and time.
+    s = t_list[0].split("-")
+    return datetime.date(int(s[0]), int(s[1]), int(s[2]))
+  else:
+    # date only
+    s = item[2].split("-")
+    return datetime.date(int(s[0]), int(s[1]), int(s[2]))
 
 banlist=Set()
 #banlist.add(".")
@@ -466,8 +473,15 @@ class WeiboReader():
     day_year_info = {}
     year_info = {}
     for info in self._data:
-      s = info[2].split("-")
-      d = datetime.date(int(s[0]), int(s[1]), int(s[2]))
+      t_list = info[2].split(" ")
+      if len(t_list) > 1:
+        # date and time.
+        s = t_list[0].split("-")
+        d = datetime.date(int(s[0]), int(s[1]), int(s[2]))
+      else:
+        s = info[2].split("-")
+        d = datetime.date(int(s[0]), int(s[1]), int(s[2]))
+        
       nums = week_info[d.weekday()]
       week_info[d.weekday()] = (nums[0]+int(info[3]), nums[1]+int(info[4]), nums[2]+int(info[5]))
       nums = week_year_info[d.isocalendar()[1]]
