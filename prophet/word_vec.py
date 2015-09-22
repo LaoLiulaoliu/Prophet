@@ -82,6 +82,9 @@ class WordVec(object):
 
     def inverse_doc_frequency(self, bag_words, vocabulary_dict):
         """ https://en.wikipedia.org/wiki/Tf%E2%80%93idf  Variants of TF weight
+            the ratio inside the idf's log function is always greater than or equal to 1,
+            the value of idf (and tf-idf) is greater than or equal to 0.
+            the ratio inside the logarithm approaches 1, bringing the idf and tf-idf closer to 0.
         """
         sample_num = len(bag_words)
         def inverse_frequency(word):
@@ -104,7 +107,7 @@ class WordVec(object):
         idf_vector = self.inverse_doc_frequency(bag_words, vocabulary_dict)
         idf_matrix = self.diagonal_idf_matrix(idf_vector)
         tf_idf_matrix = tf_matrix * idf_matrix
-        tf_idf_matrix_l2 = [l2_normalizer(vector.A[0]) for vector in tf_idf_matrix]
+        tf_idf_matrix_l2 = [l2_normalizer(vector.flatten().A[0]) for vector in tf_idf_matrix]
         return np.mat(tf_idf_matrix_l2)
 
 
