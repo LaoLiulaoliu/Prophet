@@ -93,7 +93,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
       end_val = time.time()
       print("On %d epoch, the %s precision is: %.4f, non-round: %.4f, calcuating time: %f" % (epoch, "validation", precision_val, precision_val_non_round, end_val-start_val))
       #f=theano.function([], weibo_loss_scaled_weighted(np.array(logs['val_more_func_1']), np.array(logs['val_more_func_0'])))
-      #print(f().mean())
+      #print("loss", f().mean())
 
     if not is_train_on:
       return  
