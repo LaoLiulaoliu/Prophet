@@ -23,6 +23,7 @@ from keras.layers.recurrent import LSTM
 from keras.preprocessing import sequence
 
 from gensim.models import Word2Vec
+from prophet.data import WeiboDataset
 
 dim=100
 
@@ -61,49 +62,25 @@ save_dir = "gen_nn_model"
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
+
+dataset = WeiboDataset()
+print('Loading the data...')
+dataset.load_data(
+             ("./data/weibo_train_data.txt", "./gen_data/weibo_train_data_text.txt.jian.words"),
+             ("./data/weibo_predict_data.txt", "./gen_data/weibo_predict_data_text.txt.jian.words")
+             )
 print('Loading word vector model')
 word_vec_filename="./gen_model/vec_state_s100_p0_w5_t1.all"
-word_model = Word2Vec.load(word_vec_filename)
-
-max_word_len = 0
-print('Loading the data...')
-reader = WeiboReader()
-reader.load_words_data("./data/weibo_train_data.txt", "./gen_data/weibo_train_data_text.txt.jian.words")
-train_data = reader.get_training_data()
-train_gt = np.array([[info[3], info[4], info[5]] for info in train_data], dtype='float32')
-max_word_len=find_max_seq(reader.data(), max_word_len)
-max_word_len=20
-#for info in train_data:
-#  for word in info[7]:
-#    print(word)
-#    print(word_model[word])
-  
-#train_words = np.array([collect_words_vec(word_model, info[7]) for info in train_data ], dtype='float32')
-
-#train_words = pad_sequences_3d(train_words, maxlen=None, dtype='float32', padding="post", truncating="post")
-
-val_data = reader.get_validation_data()
-val_gt = np.array([[info[3], info[4], info[5]] for info in val_data], dtype='float32')
-#val_words = [word_model[info[7]] for info in train_data]
-#val_words = np.array([collect_words_vec(word_model, info[7]) for info in val_data ], dtype='float32')
-
-#val_words = pad_sequences_3d(val_words, maxlen=None, dtype='float32', padding="post", truncating="post")
+dataset.load_words_vec(word_vec_filename, max_len=20)
 
 
-reader_pre = WeiboReader()
-reader_pre.load_words_data("./data/weibo_predict_data.txt", "weibo_predict_data_text.txt.jian.words")
-predict_data = reader_pre.data()
-max_word_len=find_max_seq(predict_data, max_word_len)
-print("The max len of words is: ", max_word_len)
-#predict_words = [word_model[info[4]] for info in predict_data]
-#predict_words = np.array([collect_words_vec(word_model, info[4]) for info in predict_data], dtype='float32')
-#exit(1)
-#predict_words = pad_sequences_3d(predict_words, maxlen=None, dtype='float32', padding="post", truncating="post")
-train_words = np.array([collect_words_vec(word_model, info[7], max_word_len) for info in train_data ], dtype='float32')
-val_words = np.array([collect_words_vec(word_model, info[7], max_word_len) for info in val_data ], dtype='float32')
-predict_words = np.array([collect_words_vec(word_model, info[4], max_word_len) for info in predict_data], dtype='float32')
-#print("Training words 0 shape", train_words[0].shape)
-#print("validation words 0 shape", val_words[0].shape)
+train_gt = dataset.get_training_data_gt_np()
+val_gt = dataset.get_validation_data_gt_np()
+print("The max len of words is: ", dataset.get_missing_info(is_valid=False, is_predict=False, is_max_len=True))
+
+train_words = dataset.get_words_vec_training_data_np()
+val_words = dataset.get_words_vec_validation_data_np()
+predict_words = dataset.get_words_vec_predict_data_np()
 
 print('Building the model')
 model = Sequential()
@@ -128,6 +105,6 @@ model.fit(train_words, train_gt, batch_size=256, nb_epoch=121, show_accuracy=Tru
 
 print("predict shape: ", predict_words.shape)
 pre=model.predict(predict_words, batch_size=128)
-reader_pre.save_data(pre, './ppl_result.txt')
+dataset.save_predictions(pre, './ppl_result.txt')
 exit(1)
 
