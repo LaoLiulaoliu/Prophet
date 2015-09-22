@@ -4,6 +4,7 @@
 
 from __future__ import print_function, division
 
+import math
 import string
 from collections import defaultdict
 
@@ -48,48 +49,63 @@ class WordVec(object):
             bag_words.append(one_bag)
         return bag_words, vocabulary_dict
 
+    def build_lexicon(self, cropus):
+        word_set = set()
+        for i, word_list in cropus.iteritems():
+            word_set.update(word_list)
+        return word_set
 
-    def bag_word_vec(self, words, Y=None):
+    def bag_word_vec(self, words, vocabulary, Y=None):
         """ m is the length of dataset
             n is length of wordset
             time complexity: m * n * length(word term)
         """
-        word_set = set()
-        for i, word_list in words.iteritems():
-            word_set.update(word_list)
-
-        word_set = list(word_set)
+        vocabulary = list(vocabulary)
         for i, word_list in words.iteritems():
             # term count
-            one_bag = [word_list.count(word) for word in word_set]
+            one_bag = [word_list.count(word) for word in vocabulary]
             if Y:
                 one_bag.extend(Y[i])
             yield one_bag
 
 
-    def term_frequency(self, bag_words):
-        """ https://en.wikipedia.org/wiki/Tf%E2%80%93idf  Variants of TF weight
-
-            对每一个词频向量进行比例缩放，使它们的每一个元素都在0到1之间，并且不会丢失太多有价值的信息。
-            确保每个向量的L2范数等于1，一个计数为1的词在一个向量中的值和其在另一个向量中的值不再相同。
-            如果想让一个文档看起来和一个特定主题更相关，你可能会通过不断重复同一个词，来增加它包含一个主题的可能性。在某种程度上，我们得到了一个在该词的信息价值上衰减的结果。所以我们需要按比例缩小那些在一篇文档中频繁出现的单词的值。
-
+    def l2_normalizer(one_bag):
         """
-        import numpy as np
-        import math
-        tf_bag_words = []
-        for one_bag in bag_words:
-            norm = math.sqrt( np.sum([word**2 for word in one_bag]) )
-            tf_bag_words.append( [word / norm for word in one_bag] )
-        return tf_bag_words
+        对每一个词频向量进行比例缩放，使它的每一个元素都在0到1之间，并且不会丢失太多有价值的信息。
+        确保每个向量的L2范数等于1，一个计数为1的词在一个向量中的值和其在另一个向量中的值不再相同。
+        如果想让一个文档看起来和一个特定主题更相关，你可能会通过不断重复同一个词，来增加它包含一个主题的可能性。
+        在某种程度上，我们得到了一个在该词的信息价值上衰减的结果。所以我们需要按比例缩小那些在一篇文档中频繁出现的单词的值。
+        """
+        norm = math.sqrt( sum([word**2 for word in one_bag]) )
+        return [word / norm for word in one_bag]
+
 
     def inverse_doc_frequency(self, bag_words, vocabulary_dict):
-        for word, idx in vocabulary_dict.iteritems():
-            a = [1 if word in one_bag else 0 for one_bag in bag_words]
-            suma = np.sum(a)
+        """ https://en.wikipedia.org/wiki/Tf%E2%80%93idf  Variants of TF weight
+        """
+        sample_num = len(bag_words)
+        def inverse_frequency(word):
+            word_count = sum( [1 if word in one_bag else 0 for one_bag in bag_words] )
+            return math.log( sample_num / (word_count + 1) )
 
+        return [inverse_frequency(word) for word, idx in vocabulary_dict.iteritems()]
 
+    def diagonal_idf_matrix(idf_vector):
+        idf_len = len(idf_vector)
+        idf_array = np.zeros((idf_len, idf_len))
+        np.fill_diagonal(idf_array, idf_vector)
+        return np.mat(idf_matrix)
 
+    def tf_idf(self):
+        import numpy as np
+        words, Y = self.load_words()
+        bag_words, vocabulary_dict = self.bag_word(words, Y)
+        tf_matrix = np.mat(bag_words)
+        idf_vector = self.inverse_doc_frequency(bag_words, vocabulary_dict)
+        idf_matrix = self.diagonal_idf_matrix(idf_vector)
+        tf_idf_matrix = tf_matrix * idf_matrix
+        tf_idf_matrix_l2 = [l2_normalizer(vector.A[0]) for vector in tf_idf_matrix]
+        return np.mat(tf_idf_matrix_l2)
 
 
 class DataGen(object):
@@ -98,7 +114,8 @@ class DataGen(object):
 
     def generator_data(self, batch_num=10):
         words, Y = self.wordvec.load_words()
-        one_bag = self.wordvec.bag_word_vec(words, Y)
+        vocabulary = self.wordvec.build_lexicon(words)
+        one_bag = self.wordvec.bag_word_vec(words, vocabulary, Y)
 
         finish_flag = 0
         while finish_flag == 0:
