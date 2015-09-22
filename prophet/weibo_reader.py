@@ -434,6 +434,8 @@ class WeiboReader():
       self._load_single_data(filename)
 
   def _attach_words(self, words):
+    if len(self._data) != len(words):
+      print("Warning: the data and sentence words are not matched!")
     for info, word in zip(self._data, words):
       info.append(word)
     
@@ -454,6 +456,8 @@ class WeiboReader():
     if not isinstance(filenames, (list, tuple)):
       filenames = [filenames]
       words_filenames = [words_filenames]
+    if len(filenames) != len(words_filenames):
+      print("Warning: the filename and words filename are not matched")
     for filename, words_filenames in zip(filenames, words_filenames):
       self._load_single_words_data(filename, words_filenames)
       
