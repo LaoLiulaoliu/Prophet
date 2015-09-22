@@ -56,16 +56,33 @@ class WordVectors():
       self._phrases = []
       for phrase_filename in phrase_filenames:
         self._phrases.append(Phrases.load(phrase_filename))
-
-  def get_words_vecs(self, words, max_len = None, f = None):
-    new_words = words
-    if self._phrases is not None:
-      new_words = self.translate_to_phrases(words)
-    return collect_words_vec(self._word2vec, new_words, max_len, self._word2vec.vector_size)
+        
+  def get_single_words_vec(self, words, max_len = None, f = None):
+    new_words_list = self.translate_to_phrases(words, f)
+    return collect_words_vec(self._word2vec, new_words_list[0], max_len, self._word2vec.vector_size)
   
-  def translate_to_phrases(self, words):
+  def get_words_vecs(self, words, max_len = None, f = None):
+    if type(words) == list and type(words[0]) == list:
+      return [ self.get_single_words_vec(single_words, max_len, f) for single_words in words]
+    else:
+      return [ self.get_single_words_vec(words, max_len, f) ]
+  
+  def translate_to_phrases(self, words, f = None):
+    """
+      Args:
+        words: [words] or [[words]]
+      Return:
+        [[words],[words]]
+    """
+    if f is not None:
+      if type(words) == list and type(words[0]) == list:
+        words = [ f(word) for word in words ]
+      else:
+        words = [ f(words) ]
+      
     if self._phrases is None:
       return words
+    
     return get_phrase_list(self._phrases, len(self._phrases) - 1, words)
 
 class WeiboDataset():
@@ -119,7 +136,7 @@ class WeiboDataset():
     
     if self._train_reader is not None:
       if self._words_vector is not None:
-        words = self._words_vector.translate_to_phrases(self._train_reader.data())
+        words = self._words_vector.translate_to_phrases(self._train_reader.data(), lambda info: info[7])
         max_len = find_max_seq(words, max_len, lambda info: info, is_print)
       else:
         words = self._train_reader.data()
@@ -127,7 +144,7 @@ class WeiboDataset():
         
     if self._predict_reader is not None:
       if self._words_vector is not None:
-        words = self._words_vector.translate_to_phrases(self._predict_reader.data())
+        words = self._words_vector.translate_to_phrases(self._predict_reader.data(), lambda info: info[4])
         max_len = find_max_seq(words, max_len, lambda info: info, is_print)
       else:
         max_len = find_max_seq(self._predict_reader.data(), max_len, 
@@ -191,7 +208,7 @@ class WeiboDataset():
                                              lambda info: info[4])
   
   def get_words_vec_predict_data_np(self):
-    return np.array(self.get_words_predict_data(), dtype='float32')
+    return np.array(self.get_words_vec_predict_data(), dtype='float32')
   
     
   def get_ppl_training_data(self):
@@ -255,6 +272,7 @@ class WeiboDataset():
       missing['pre_c'] = self._ppl_idx_table.get_missing_count()
     if is_max_len:
       missing['max_len'] = self._calculate_max_seq()
+      missing['set_max_len'] = self._max_len
     return missing
       
       
