@@ -259,7 +259,7 @@ class WeiboDataset():
   def get_validation_data_gt_np(self):
     return np.array(self.get_validation_data_gt(), dtype='float32')
   
-  def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True):
+  def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True, is_print=False):
     missing={}
     if is_valid and self._train_reader is not None:
       self._ppl_idx_table.reset_missing()
@@ -273,7 +273,7 @@ class WeiboDataset():
       missing['pre'] = self._ppl_idx_table.get_missing_uniq_ppl()
       missing['pre_c'] = self._ppl_idx_table.get_missing_count()
     if is_max_len:
-      missing['max_len'] = self._calculate_max_seq()
+      missing['max_len'] = self._calculate_max_seq(is_print=is_print)
       missing['set_max_len'] = self._max_len
     return missing
       
