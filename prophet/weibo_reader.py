@@ -474,8 +474,10 @@ class WeiboReader():
     year_info = {}
     for info in self._data:
       t_list = info[2].split(" ")
+      key_date = info[2]
       if len(t_list) > 1:
         # date and time.
+        key_date = t_list[0]
         s = t_list[0].split("-")
         d = datetime.date(int(s[0]), int(s[1]), int(s[2]))
       else:
@@ -503,11 +505,11 @@ class WeiboReader():
         nums = (0,0,0)
         year_info[d.year] = nums
       year_info[d.year] = (nums[0]+int(info[3]), nums[1]+int(info[4]), nums[2]+int(info[5]))
-      if day_year_info.has_key(info[2]):
-        nums = day_year_info[info[2]]
+      if day_year_info.has_key(key_date):
+        nums = day_year_info[key_date]
       else:
         nums = (0,0,0)
-      day_year_info[info[2]] = (nums[0]+int(info[3]), nums[1]+int(info[4]), nums[2]+int(info[5]))
+      day_year_info[key_date] = (nums[0]+int(info[3]), nums[1]+int(info[4]), nums[2]+int(info[5]))
         
     print "++ week info(Monday is 0 and Sunday is 6):"
     for idx, s_info in enumerate(week_info):
