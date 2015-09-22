@@ -11,6 +11,7 @@ fi
 
 ${Bin}/pip install --upgrade pip
 ${Bin}/pip install Cython
+${Bin}/pip install numpy
 ${Bin}/pip install scipy==0.15.1
 ${Bin}/pip install h5py
 ${Bin}/pip install gensim
@@ -24,6 +25,14 @@ fi
 
 if ! test -d "lib" ; then
 	mkdir lib
+fi
+
+if ! test -d "lib/Theano" ; then
+	(cd lib; git clone https://github.com/Theano/Theano.git)
+fi
+
+if test -d "lib/Theano" ; then
+	(cd lib/Theano; ${Bin}/pip install -e . )
 fi
 
 if ! test -d "lib/keras" ; then
