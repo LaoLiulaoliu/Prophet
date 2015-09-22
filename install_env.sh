@@ -39,6 +39,6 @@ if ! test -d "lib/keras" ; then
 	(cd lib; git clone https://github.com/dxj19831029/keras)
 fi
 if test -d "lib/keras" ; then
-        (cd lib/keras; ${Bin}/python setup.py install)
+        (cd lib/keras; git checkout xd ; ${Bin}/python setup.py install)
 	#${Bin}/pip install keras
 fi
