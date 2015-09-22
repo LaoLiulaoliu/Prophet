@@ -77,7 +77,7 @@ max_features = idx_table.get_table_idx()
 print('Build model...')
 model = Sequential()
 model.add(Embedding(max_features, dim_proj, init="uniform"))
-model.add(Dropout(0.5))
+model.add(Dropout(0.7))
 model.add(Flatten())
 model.add(Dense(dim_proj, dim_output, init="uniform", activation="linear",
                 W_regularizer=l2(0.01)))
