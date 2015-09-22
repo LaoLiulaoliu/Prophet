@@ -54,6 +54,8 @@ class WordVectors():
     
     if phrase_filenames is not None:
       self._phrases = []
+      if type(phrase_filenames) is not list:
+        phrase_filenames = [phrase_filenames]
       for phrase_filename in phrase_filenames:
         self._phrases.append(Phrases.load(phrase_filename))
         
