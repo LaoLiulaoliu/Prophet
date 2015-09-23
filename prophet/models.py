@@ -2,13 +2,15 @@
 #!/usr/bin/env python
 
 from keras.layers.embeddings import Embedding
-from keras.layers.core import Dense, Flatten, Dropout, Merge
+from keras.layers.core import Dense, Flatten, Dropout, Merge, Activation
 from keras.models import Sequential 
 from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.regularizers import l2
 from keras.layers.recurrent import LSTM
+from keras.layers.convolutional import *
 import os
 import theano.tensor as T
+from keras.constraints import *
 
 def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename = None, is_output=True):
   model = Sequential()
@@ -58,6 +60,9 @@ def build_content_contex_model_lstm(in_dim=100, hidden1=512, dense1=1024,
     model.load_weights(saved_filename)
   return model
 
+def weibo_act(x):
+  return T.switch(T.lt(x, 100000), T.abs_(x), 100000)
+
 def build_combine_model(max_ppl, dim_proj=300, vec_dim=100, 
                         lstm_hidden=256, dim_output=3, 
                         saved_filename=None, is_output=True):
@@ -70,7 +75,9 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   
   dense1=1024
   content_model = Sequential()
-  content_model.add(LSTM(vec_dim, lstm_hidden, return_sequences=False))  # try using a GRU instead, for fun
+  content_model.add(LSTM(vec_dim, lstm_hidden, return_sequences=True))  # try using a GRU instead, for fun
+  content_model.add(Dropout(0.2))
+  content_model.add(LSTM(lstm_hidden, lstm_hidden, return_sequences=False))  # try using a GRU instead, for fun
   content_model.add(Dropout(0.5))
   content_model.add(Dense(lstm_hidden, dense1, init='uniform', activation="tanh",
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
@@ -85,15 +92,45 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   model=Sequential()
   model.add(Merge([ppl_model, content_model], mode='concat', concat_axis=1))
   model.add(Dropout(0.6))
-  model.add(Dense(dim_proj+dense1, 2048, activation='sigmoid',
+  model.add(Dense(dim_proj+dense1, 2048, activation='tanh',
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
   model.add(Dropout(0.5))
-  if is_output:
-    model.add(Dense(2048, dim_output, init="uniform", activation=lambda x: T.switch(T.lt(x, 100000), T.abs_(x), 100000),
+  model.add(Dense(2048, 4096, activation='tanh',
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
+  model.add(Dropout(0.8))
+  if is_output:
+    model.add(Dense(4096, dim_output, init="uniform", activation=weibo_act,
+                  W_regularizer=l2(0.01), b_regularizer=l2(0.01), W_constraint = maxnorm(2)) )
 
   if saved_filename is not None and os.path.isfile(saved_filename):
     model.load_weights(saved_filename)
         
   return model
+
+def build_conv2d_model(nb_feat1=32, nb_row=30, nb_col=30, nb_pool=10, 
+                       words = 30, words_vec = 100, output_dim=3,
+                       saved_filename=None, is_output=True):
+  conv_model = Sequential()
+  conv_model.add(Convolution2D(nb_feat1, 1, nb_row, nb_col, 
+                               init="normal" ,border_mode="full"))
+  conv_model.add(Activation('relu'))
+  conv_model.add(Convolution2D(nb_feat1, nb_feat1, nb_row, nb_col, 
+                               init="normal" ,border_mode="full"))
+  conv_model.add(Activation('relu'))
+  conv_model.add(MaxPooling2D(poolsize=(nb_pool,nb_pool)))
+  conv_model.add(Dropout(0.25))
+  conv_model.add(Flatten())
+  
+  # (the number of filters is determined by the last Conv2D)
+  conv_model.add(Dense(nb_feat1 * (words / nb_pool) * (words_vec / nb_pool), 
+                       2048, activation="relu"))
+  conv_model.add(Dropout(0.5))
+  
+  if is_output:
+    conv_model.add(Dense(2048, output_dim, activation=weibo_act))
+  
+  if saved_filename is not None and os.path.isfile(saved_filename):
+    conv_model.load_weights(saved_filename)
+
+  return conv_model
 

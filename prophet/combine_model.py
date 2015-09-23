@@ -49,7 +49,7 @@ dataset.load_data(
 print('Loading word vector model')
 word_vec_filename="./gen_model2/vec_state_s100_p1_w5_t1.all"
 phrase_filenames="./gen_model2/vec_state_s100_p1_w5_t1.all.phrase0"
-dataset.load_words_vec(word_vec_filename, phrase_filenames, max_len=10)
+dataset.load_words_vec(word_vec_filename, phrase_filenames, max_len=15)
 
 print('Generating training/validation/predicting data')
 train_gt = dataset.get_training_data_gt_np()
@@ -67,7 +67,7 @@ print('Building the model')
 vec_dim=100
 model = build_combine_model(dataset.get_ppl_max_count(), vec_dim=vec_dim)
 
-sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = SGD(lr=0.05, decay=1e-6, momentum=0.9, nesterov=True)
 
 model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack) #, theano_mode=theano.compile.MonitorMode(post_func=detect_nan))
 #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
