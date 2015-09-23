@@ -92,13 +92,14 @@ class WeiboDataset():
   """
     It creates and convert all the data
   """
-  def __init__(self):
+  def __init__(self, max_limit = None):
     self._train_reader = None
     self._predict_reader = None
     self._ppl_idx_table = PplIdxTable()
     self._is_init_all_tr = False
     self._words_vector = None
     self._max_len = None
+    self._max_limit = max_limit
     
   def _init_ppl_table(self, is_init_all_tr=False, is_init_ppl_standard=True):
     if self._train_reader is not None:
@@ -128,7 +129,7 @@ class WeiboDataset():
   def load_data(self, train_filename, predict_filename = None, is_init_all_tr = False, is_init_ppl_standard=True):
     self._is_init_all_tr = is_init_all_tr
     if train_filename is not None:
-      self._train_reader = WeiboReader()
+      self._train_reader = WeiboReader(self._max_limit)
       if type(train_filename) != list:
         train_filenames = [train_filename]
       
@@ -140,7 +141,7 @@ class WeiboDataset():
           
       
     if predict_filename is not None:
-      self._predict_reader = WeiboReader()
+      self._predict_reader = WeiboReader(self._max_limit)
       if type(predict_filename) != list:
         predict_filenames = [predict_filename]
         

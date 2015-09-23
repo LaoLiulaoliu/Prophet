@@ -310,11 +310,13 @@ def uniq(in_list):
       last = item
   return new_list
 
-def load_words(filename, words=None):
+def load_words(filename, words=None, max_limit=None):
   if words is None:
     words = []
   with open(filename) as fd:
     for line in fd:
+      if max_limit is not None and len(words) > max_limit:
+        break
       start = 0
       if line[0] == '[':
         start=1
@@ -338,7 +340,7 @@ class WeiboReader():
   """
   # 20% for validation.
   VADATION_RATION = 0.2 
-  def __init__(self):
+  def __init__(self, max_limit = None):
     self._total_uids = 0
     self._total_mids = 0
     self._total_forward_count = 0
@@ -361,6 +363,7 @@ class WeiboReader():
     self._training_set = None
     self._validation_set = None
     self._is_include_words = None
+    self._max_limit = max_limit
 
   def data(self):
     return self._data
@@ -519,6 +522,8 @@ class WeiboReader():
       return False
     
     for line in open(filename, 'r'):
+      if self._max_limit is not None and len(self._data) > self._max_limit:
+        break 
       info = line.split("\t")
       if len(info) == 4:
         self._is_prediction_data = True
@@ -550,7 +555,7 @@ class WeiboReader():
       return False
     
     self._load_single_data(filename)
-    words = load_words(words_filename)
+    words = load_words(words_filename, self._max_limit)
     self._attach_words(words)
       
           
