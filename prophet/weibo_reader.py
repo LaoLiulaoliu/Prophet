@@ -555,7 +555,7 @@ class WeiboReader():
       return False
     
     self._load_single_data(filename)
-    words = load_words(words_filename, self._max_limit)
+    words = load_words(words_filename, max_limit=self._max_limit)
     self._attach_words(words)
       
           
