@@ -69,7 +69,7 @@ model = build_combine_model(dataset.get_ppl_max_count(), vec_dim=vec_dim)
 
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 
-model.compile(loss=weibo_loss_weighted, optimizer=sgd, other_func_init=build_precisio_stack, theano_mode=theano.compile.MonitorMode(post_func=detect_nan))
+model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack) #, theano_mode=theano.compile.MonitorMode(post_func=detect_nan))
 #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
 print("Traing the model")
