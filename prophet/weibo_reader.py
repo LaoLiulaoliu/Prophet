@@ -53,15 +53,22 @@ def get_like_count(item):
   return int(item[5])
 
 def get_date_info(item):
+  # notice, year can be more than 2015
   t_list = item[2].split(" ")
   if len(t_list) > 1:
     # date and time.
     s = t_list[0].split("-")
-    return datetime.date(int(s[0]), int(s[1]), int(s[2]))
+    if int(s[0]) > 2015:
+      return datetime.date(2015, int(s[1]), int(s[2]))
+    else:
+      return datetime.date(int(s[0]), int(s[1]), int(s[2]))
   else:
     # date only
     s = item[2].split("-")
-    return datetime.date(int(s[0]), int(s[1]), int(s[2]))
+    if int(s[0]) > 2015:
+      return datetime.date(2015, int(s[1]), int(s[2])) 
+    else:
+      return datetime.date(int(s[0]), int(s[1]), int(s[2]))
 
 banlist=Set()
 #banlist.add(".")
@@ -400,6 +407,49 @@ class WeiboReader():
       self._uid_data[info[0]] = [info]
       self._total_uids += 1
 
+  def _calculate_uid_standard(self, all_uid_mids):
+    if len(all_uid_mids) <= 0:
+      return (0)
+
+    total_mid = len(all_uid_mids)
+    start_date = None
+    end_date = None
+    for mid_info in all_uid_mids:
+      #print(mid_info[2])
+      mid_time = get_date_info(mid_info)
+      if start_date is None:
+        start_date = mid_time
+      else:
+        if start_date > mid_time:
+          start_date = mid_time  
+          
+      if end_date is None:
+        end_date = mid_time
+      else:
+        if end_date < mid_time:
+          end_date = mid_time
+    #print("total mid: ", total_mid, " start_date: ", str(start_date), " end date: ", str(end_date))
+    avg_mid = float(total_mid) / ((end_date - start_date).days+1)
+    return (avg_mid, 0)
+  
+  def get_uid_standards(self, dataset_name = "all"):
+    uid_standards = {}
+    if dataset_name == "all":
+      for uid, uid_infos in self._uid_data.iteritems():
+        uid_standards[uid] = self._calculate_uid_standard(uid_infos)
+    else:
+      if dataset_name == "training":
+        all_info = self.get_training_data()
+      else:
+        all_info = self.get_validation_data()
+        
+      for info in all_info:
+        uid = info[0]
+        if uid not in uid_standards:
+          uid_standards[uid] = self._calculate_uid_standard(self._uid_data[uid])
+    
+    return uid_standards
+  
   def _caclulate_uid_info(self, all_uid_mids, is_str = False):
     if len(all_uid_mids) <= 0:
       if is_str:

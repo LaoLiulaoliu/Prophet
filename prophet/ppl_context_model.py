@@ -31,8 +31,10 @@ model_load_fname = "ppl_context.pkl"
 model_save_fname = "ppl_context.pkl"
 
 print('Loading the data...')
+import time
+start = time.time()
 data = WeiboDataset()
-data.load_data("./data/weibo_train_data.txt", "./data/weibo_predict_data.txt")
+data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=True)
 
 
 train_gt = data.get_training_data_gt_np()
@@ -43,6 +45,7 @@ val_ppl = data.get_ppl_validation_data_np()
 predict_ppl = data.get_ppl_predict_data_np()
 
 missing_info = data.get_missing_info(is_max_len=False)
+print("cost time: ", str(time.time() - start))
 
 print("-- validation missing %d users, %d weibo" % (missing_info['val'], missing_info['val_c']))
 print("-- predict data missing %d users, %d weibo" % (missing_info['pre'], missing_info['pre_c']))
@@ -58,7 +61,7 @@ sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 #model.compile(loss=weibo_loss_weighted, optimizer=sgd)
 model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
 
-checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state.full_t.10.f10.pkl", save_best_only=False)
+checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state2.full_t.10.f10.pkl", save_best_only=False)
 precision = WeiboPrecisionCallback()
 model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_ppl, val_gt))
 
@@ -66,6 +69,6 @@ pre=model.predict(val_ppl, batch_size=128)
 print("validation weibo acc: ", WeiboPrecision.precision_match(val_gt, pre))
 
 pre=model.predict(predict_ppl, batch_size=128)
-data.save_predictions(pre, './ppl_result.txt')
+data.save_predictions(pre, './ppl_result2.txt')
 
 

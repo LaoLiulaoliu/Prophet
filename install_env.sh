@@ -15,6 +15,7 @@ ${Bin}/pip install numpy
 ${Bin}/pip install scipy==0.15.1
 ${Bin}/pip install h5py
 ${Bin}/pip install gensim
+${Bin}/pip install sklearn
 
 
 if ! test -d "library" ; then

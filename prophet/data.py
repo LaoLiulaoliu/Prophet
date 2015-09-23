@@ -6,6 +6,7 @@ from ppl_idx_table import PplIdxTable
 import numpy as np
 from gensim.models import Word2Vec
 from gensim.models import Phrases
+from sklearn.neighbors import KDTree
 
 def get_phrase_list(p_list, n, sen):
   if n == 0:
@@ -99,16 +100,32 @@ class WeiboDataset():
     self._words_vector = None
     self._max_len = None
     
-  def _init_ppl_table(self, is_init_all_tr=False):
+  def _init_ppl_table(self, is_init_all_tr=False, is_init_ppl_standard=True):
     if self._train_reader is not None:
       if is_init_all_tr:
         data = self._train_reader.data()
       else:
         data = self._train_reader.get_training_data()
         
-      self._ppl_idx_table.create_ppls_table(data, lambda info: info[0])
+      self._ppl_idx_table.create_ppls_table(data, lambda info: info[0])  
+
+    if is_init_ppl_standard and self._train_reader is not None:
+      val_standard = {}
+      if is_init_all_tr:
+        data_standard = self._train_reader.get_uid_standards("all")
+      else:
+        data_standard = self._train_reader.get_uid_standards("training")
+        val_standard = self._train_reader.get_uid_standards("validation")
+        
+      if self._predict_reader is not None:
+        predict_stand = self._predict_reader.get_uid_standards("all")
+        val_standard.update(predict_stand)
+      
+      self._ppl_idx_table.create_ppl_standard(data_standard)
+      self._ppl_idx_table.init_unknow_ppl_standard_map(val_standard)
+      
     
-  def load_data(self, train_filename, predict_filename = None, is_init_all_tr = False):
+  def load_data(self, train_filename, predict_filename = None, is_init_all_tr = False, is_init_ppl_standard=True):
     self._is_init_all_tr = is_init_all_tr
     if train_filename is not None:
       self._train_reader = WeiboReader()
@@ -121,7 +138,6 @@ class WeiboDataset():
         else:
           self._train_reader.load_data(train_filename)
           
-      self._init_ppl_table(is_init_all_tr)
       
     if predict_filename is not None:
       self._predict_reader = WeiboReader()
@@ -133,6 +149,9 @@ class WeiboDataset():
           self._predict_reader.load_words_data(predict_filename[0], predict_filename[1])
         else:
           self._predict_reader.load_data(predict_filename)
+          
+    self._init_ppl_table(is_init_all_tr, is_init_ppl_standard)
+      
           
   def _calculate_max_seq(self, max_len=0, is_print = False):
     
