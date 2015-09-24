@@ -3,8 +3,8 @@
 
 
 import prophet
-training_filename="./data/weibo_train_data.txt"
-predict_filename="./data/weibo_predict_data.txt"
+training_filename="./data2/weibo_train_data.txt"
+predict_filename="./data2/weibo_predict_data.txt"
 
 reader = prophet.WeiboReader()
 reader.load_data(training_filename)
