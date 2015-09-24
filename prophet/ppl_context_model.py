@@ -4,6 +4,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+prophet_root = '/home/xijing/Work/weibo/Prophet'
+import sys
+sys.path.insert(0, prophet_root)
+
 
 from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.callbacks import ModelCheckpoint
