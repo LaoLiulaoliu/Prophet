@@ -111,3 +111,26 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     self._y_pred.extend(logs['more_func_0'])
     self._y.extend(logs['more_func_1'])
     
+def detect_nan(i, node, fn):
+    for output in fn.outputs:
+        if (not isinstance(output[0], np.random.RandomState) and
+            np.isnan(output[0]).any()):
+            print('*** NaN detected *** i: ', i)
+            theano.printing.debugprint(node)
+            print(node)
+            print("input nan: ", np.isnan(fn.inputs[0][0]).any())
+            print('Inputs : %s' % [(input[0], np.asarray(input[0]).shape) for input in fn.inputs])
+            #print('numpy result is %s' % ([numpy.asarray(input[0]).tolist() for input in fn.inputs]))
+            print('Outputs: %s' % [(output[0], np.asarray(output[0]).shape) for output in fn.outputs])
+            #print(np.asarray(fn.inputs[0][0]))
+            #print(fn.outputs[0][0].shape)
+            #for vec in np.asarray(fn.outputs[0][0]).tolist():  
+            #  if np.isnan(np.array(vec)):
+            #    print(vec)
+            #print(np.asarray(fn.outputs[0][0]).tolist())
+            #print(np.asarray(fn.outputs[0][0]).tolist())
+              
+            #print('numpy result is %s' % ([numpy.asarray(output[0]).tolist() for output in fn.outputs]))
+            exit(1)
+
+    

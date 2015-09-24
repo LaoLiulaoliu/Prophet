@@ -110,27 +110,42 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
         
   return model
 
-def build_conv2d_model(nb_feat1=32, nb_row=30, nb_col=30, nb_pool=10, 
+def build_conv2d_model(nb_feat1=200, 
                        words = 30, words_vec = 100, output_dim=3,
                        saved_filename=None, is_output=True):
+#   conv_model = Sequential()
+#   conv_model.add(Convolution2D(nb_feat1, 1, nb_row, nb_col, 
+#                                init="normal" ,border_mode="full"))
+#   conv_model.add(Activation('relu'))
+#   conv_model.add(Convolution2D(nb_feat1, nb_feat1, nb_row, nb_col, 
+#                                init="normal" ,border_mode="full"))
+#   conv_model.add(Activation('relu'))
+#   conv_model.add(MaxPooling2D(poolsize=(nb_pool,nb_pool)))
+#   conv_model.add(Dropout(0.25))
+#   conv_model.add(Flatten())
+#   
+#   # (the number of filters is determined by the last Conv2D)
+#   conv_model.add(Dense(nb_feat1 * (words / nb_pool) * (words_vec / nb_pool), 
+#                        2048, activation="relu"))
+#   conv_model.add(Dropout(0.5))
+  n_gram = 3
+  w_decay = 0.0005
   conv_model = Sequential()
-  conv_model.add(Convolution2D(nb_feat1, 1, nb_row, nb_col, 
-                               init="normal" ,border_mode="full"))
+  conv_model.add(Convolution2D(nb_feat1, 1, n_gram, words_vec, init="normal",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(2)))
   conv_model.add(Activation('relu'))
-  conv_model.add(Convolution2D(nb_feat1, nb_feat1, nb_row, nb_col, 
-                               init="normal" ,border_mode="full"))
-  conv_model.add(Activation('relu'))
-  conv_model.add(MaxPooling2D(poolsize=(nb_pool,nb_pool)))
-  conv_model.add(Dropout(0.25))
+  conv_model.add(MaxPooling2D(poolsize=(words - n_gram + 1, 1)))
+  #conv_model.add(Dropout(0.5))
   conv_model.add(Flatten())
-  
-  # (the number of filters is determined by the last Conv2D)
-  conv_model.add(Dense(nb_feat1 * (words / nb_pool) * (words_vec / nb_pool), 
-                       2048, activation="relu"))
+  conv_model.add(Dense(nb_feat1, 1024, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
   conv_model.add(Dropout(0.5))
-  
+  conv_model.add(Dense(1024, 1024, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
+  conv_model.add(Dropout(0.5))
   if is_output:
-    conv_model.add(Dense(2048, output_dim, activation=weibo_act))
+    conv_model.add(Dense(1024, output_dim, activation=weibo_act,
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(2)))
   
   if saved_filename is not None and os.path.isfile(saved_filename):
     conv_model.load_weights(saved_filename)
