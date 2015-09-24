@@ -60,15 +60,18 @@ class WordVectors():
       for phrase_filename in phrase_filenames:
         self._phrases.append(Phrases.load(phrase_filename))
         
-  def get_single_words_vec(self, words, max_len = None, f = None):
+  def get_single_words_vec(self, words, max_len = None, f = None, is_conv2d = False):
     new_words_list = self.translate_to_phrases(words, f)
-    return collect_words_vec(self._word2vec, new_words_list[0], max_len, self._word2vec.vector_size)
-  
-  def get_words_vecs(self, words, max_len = None, f = None):
-    if type(words) == list and type(words[0]) == list:
-      return [ self.get_single_words_vec(single_words, max_len, f) for single_words in words]
+    if is_conv2d:
+      return [collect_words_vec(self._word2vec, new_words_list[0], max_len, self._word2vec.vector_size)]
     else:
-      return [ self.get_single_words_vec(words, max_len, f) ]
+      return collect_words_vec(self._word2vec, new_words_list[0], max_len, self._word2vec.vector_size)
+  
+  def get_words_vecs(self, words, max_len = None, f = None, is_conv2d = False):
+    if type(words) == list and type(words[0]) == list:
+      return [ self.get_single_words_vec(single_words, max_len, f, is_conv2d) for single_words in words]
+    else:
+      return [ self.get_single_words_vec(words, max_len, f, is_conv2d) ]
   
   def translate_to_phrases(self, words, f = None):
     """
@@ -100,6 +103,9 @@ class WeiboDataset():
     self._words_vector = None
     self._max_len = None
     self._max_limit = max_limit
+    
+  def max_len(self):
+    return self._max_len
     
   def _init_ppl_table(self, is_init_all_tr=False, is_init_ppl_standard=True):
     if self._train_reader is not None:
@@ -184,27 +190,29 @@ class WeiboDataset():
       else:
         self._max_len = self._calculate_max_seq()
 
-  def get_words_vec_training_data(self):
+  def get_words_vec_training_data(self, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
       return self._words_vector.get_words_vecs(
-               self._train_reader.data(), self._max_len, lambda info: info[7]
-               ) 
+               self._train_reader.data(), self._max_len, lambda info: info[7],
+               is_conv_2d
+               )
                
     else:                
       return self._words_vector.get_words_vecs(
                     self._train_reader.get_training_data(), 
                     self._max_len, 
-                    lambda info: info[7]
+                    lambda info: info[7],
+                    is_conv_2d
                     ) 
              
-  def get_words_vec_training_data_np(self):
-    return np.array(self.get_words_vec_training_data(), dtype='float32')
+  def get_words_vec_training_data_np(self, is_conv_2d=False):
+    return np.array(self.get_words_vec_training_data(is_conv_2d), dtype='float32')
   
-  def get_words_vec_validation_data(self):
+  def get_words_vec_validation_data(self, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._train_reader is None:
@@ -214,23 +222,24 @@ class WeiboDataset():
     return self._words_vector.get_words_vecs(
                   self._train_reader.get_validation_data(), 
                   self._max_len, 
-                  lambda info: info[7]
+                  lambda info: info[7],
+                  is_conv_2d
                   )
     
-  def get_words_vec_validation_data_np(self):
-    return np.array(self.get_words_vec_validation_data(), dtype='float32')
+  def get_words_vec_validation_data_np(self, is_conv_2d=False):
+    return np.array(self.get_words_vec_validation_data(is_conv_2d), dtype='float32')
   
   
-  def get_words_vec_predict_data(self):
+  def get_words_vec_predict_data(self, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._predict_reader is None:
       return []
     return self._words_vector.get_words_vecs(self._predict_reader.data(), self._max_len, 
-                                             lambda info: info[4])
+                                             lambda info: info[4], is_conv_2d)
   
-  def get_words_vec_predict_data_np(self):
-    return np.array(self.get_words_vec_predict_data(), dtype='float32')
+  def get_words_vec_predict_data_np(self, is_conv_2d=False):
+    return np.array(self.get_words_vec_predict_data(is_conv_2d), dtype='float32')
   
     
   def get_ppl_training_data(self):
