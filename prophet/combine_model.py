@@ -31,19 +31,19 @@ dataset.load_data(
 print('Loading word vector model')
 word_vec_filename="./gen_model2/vec_state_s100_p1_w5_t1.all"
 phrase_filenames="./gen_model2/vec_state_s100_p1_w5_t1.all.phrase0"
-dataset.load_words_vec(word_vec_filename, phrase_filenames, max_len=15)
+dataset.load_words_vec(word_vec_filename, phrase_filenames, max_len=None)
 
 print('Generating training/validation/predicting data')
-train_gt = dataset.get_training_data_gt_np()
-val_gt = dataset.get_validation_data_gt_np()
+train_gt = dataset.get_training_data_gt_matrix()
+val_gt = dataset.get_validation_data_gt_matrix()
 print("The max len of words is: ", dataset.get_missing_info(is_valid=False, is_predict=False, is_max_len=True, is_print=False))
 
-train_words = dataset.get_words_vec_training_data_np()
-train_ppl = dataset.get_ppl_training_data_np()
-val_words = dataset.get_words_vec_validation_data_np()
-val_ppl = dataset.get_ppl_validation_data_np()
-predict_words = dataset.get_words_vec_predict_data_np()
-predict_ppl = dataset.get_ppl_predict_data_np()
+train_words = dataset.get_words_vec_training_data_matrix()
+train_ppl = dataset.get_ppl_training_data_matrix()
+val_words = dataset.get_words_vec_validation_data_matrix()
+val_ppl = dataset.get_ppl_validation_data_matrix()
+predict_words = dataset.get_words_vec_predict_data_matrix()
+predict_ppl = dataset.get_ppl_predict_data_matrix()
 
 print('Building the model')
 vec_dim=100
