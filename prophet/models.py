@@ -125,7 +125,7 @@ def build_conv2d_model(nb_feat1=200,
 #   conv_model.add(Dense(nb_feat1 * (words / nb_pool) * (words_vec / nb_pool), 
 #                        2048, activation="relu"))
 #   conv_model.add(Dropout(0.5))
-  n_gram = 5
+  n_gram = 3
   w_decay = 0.0005
   conv_model = Sequential()
   conv_model.add(Convolution2D(nb_feat1, 1, n_gram, words_vec, init="normal",
@@ -134,11 +134,14 @@ def build_conv2d_model(nb_feat1=200,
   conv_model.add(MaxPooling2D(poolsize=(words - n_gram + 1, 1)))
   #conv_model.add(Dropout(0.5))
   conv_model.add(Flatten())
-  #conv_model.add(Dense(nb_feat1, 1024, activation="relu",
-  #                W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
+  conv_model.add(Dense(nb_feat1, 1024, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
+  conv_model.add(Dropout(0.5))
+  conv_model.add(Dense(1024, 1024, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
   conv_model.add(Dropout(0.5))
   if is_output:
-    conv_model.add(Dense(nb_feat1, output_dim, activation=weibo_act,
+    conv_model.add(Dense(1024, output_dim, activation=weibo_act,
                   W_regularizer=l2(w_decay), W_constraint = maxnorm(2)))
   
   if saved_filename is not None and os.path.isfile(saved_filename):
