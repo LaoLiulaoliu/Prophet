@@ -7,31 +7,13 @@ import os
 
 from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.callbacks import ModelCheckpoint
-from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, WeiboPrecisionCallback, build_precisio_stack
+from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, WeiboPrecisionCallback, build_precisio_stack, detect_nan
 
 from prophet.data import WeiboDataset
 from prophet.models import *
 import theano
 import theano.compile
 from theano.compile import monitormode
-import numpy
-
-def detect_nan(i, node, fn):
-    for output in fn.outputs:
-        if (not isinstance(output[0], numpy.random.RandomState) and
-            numpy.isnan(output[0]).any()):
-            print('*** NaN detected *** i: ', i)
-            theano.printing.debugprint(node)
-            print('Inputs : %s' % [input[0] for input in fn.inputs])
-            #print('numpy result is %s' % ([numpy.asarray(input[0]).tolist() for input in fn.inputs]))
-            print('Outputs: %s' % [output[0] for output in fn.outputs])
-            
-            for vec in numpy.asarray(fn.outputs[0][0]).tolist():  
-              if numpy.isnan(numpy.array(vec)):
-                print(vec)
-              
-            #print('numpy result is %s' % ([numpy.asarray(output[0]).tolist() for output in fn.outputs]))
-            exit(1)
                     
 dim=100
     
