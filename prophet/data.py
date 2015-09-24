@@ -7,6 +7,7 @@ import numpy as np
 from gensim.models import Word2Vec
 from gensim.models import Phrases
 from sklearn.neighbors import KDTree
+from collections import defaultdict
 
 def get_phrase_list(p_list, n, sen):
   if n == 0:
@@ -90,7 +91,76 @@ class WordVectors():
       return words
     
     return get_phrase_list(self._phrases, len(self._phrases) - 1, words)
+  
+class WeiboMatrix():
+  refs = defaultdict(int)
+  def __init__(self, dataset, len_func = None, shape_func=None, data_func=None):
+    """
+      Args:
+        type: training/validation/predict
+    """
+    self._dataset = dataset
+    self._len_func = len_func
+    self._shape_func = shape_func
+    self._data_func = data_func
+    
+  def __getitem__(self,key):
+    if isinstance(key, slice):
+      if key.start < 0 or key.stop > self.__len__():
+        print("my error")
+        raise IndexError
+      else:
+        return self._data_func(self._dataset, key.start, key.stop)
+    elif isinstance(key, int):
+      if key < 0 or key > self.__len__():
+        print("my error")
+        raise IndexError
+      else:
+        return self._data_func(self._dataset, key, key+1)
+      
+    elif isinstance(key, np.ndarray):
+      if np.max(key) < self.__len__():
+        val = []
+        for idx in key.tolist():
+          s_data = self._data_func(self._dataset, idx, idx+1)
+          val.append(s_data[0])
+        return np.array(val)
+      else:
+        raise IndexError
+    elif isinstance(key, list): 
+      if max(key) < self.__len__():
+        val = []
+        for idx in key:
+          s_data = self._data_func(self._dataset, idx, idx+1)
+          val.append(s_data[0])
+        return np.array(val)
+      else:
+        raise IndexError
+      
+      
+  def __len__(self):
+    if self._len_func is None:
+      return 0
+    else:
+      return self._len_func(self._dataset)
+    
+  @property
+  def shape(self):
+    if self._shape_func is None:
+      return tuple([self.__len__()])
+    else:
+      return tuple([self.__len__(), self._shape_func(self._dataset)])
+      
 
+def l_slice_data(l_data, start, end):
+  if start is None:
+    start = 0
+  if end is None:
+    end = len(l_data)
+  if start == 0 and end == len(l_data):
+    return l_data
+  return l_data[start:end]
+  
 class WeiboDataset():
   """
     It creates and convert all the data
@@ -106,6 +176,28 @@ class WeiboDataset():
     
   def max_len(self):
     return self._max_len
+  
+  def get_training_len(self):
+    if self._train_reader is None:
+      return 0
+    
+    if self._is_init_all_tr:
+      return len(self._train_reader.data())
+    else:
+      return len(self._train_reader.get_training_data())
+    
+  def get_validation_len(self):
+    if self._train_reader is None:
+      return 0
+    if self._is_init_all_tr:
+      return 0
+    else:
+      return len(self._train_reader.get_validation_data())
+    
+  def get_prediction_len(self):
+    if self._predict_reader is None:
+      return 0
+    return len(self._predict_reader.data())
     
   def _init_ppl_table(self, is_init_all_tr=False, is_init_ppl_standard=True):
     if self._train_reader is not None:
@@ -190,103 +282,177 @@ class WeiboDataset():
       else:
         self._max_len = self._calculate_max_seq()
 
-  def get_words_vec_training_data(self, is_conv_2d=False):
+  def get_words_vec_training_data(self, start = None, end = None, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._train_reader is None:
       return []
+    l_data = None
     if self._is_init_all_tr:
-      return self._words_vector.get_words_vecs(
-               self._train_reader.data(), self._max_len, lambda info: info[7],
-               is_conv_2d
-               )
+      l_data = self._train_reader.data()
                
-    else:                
-      return self._words_vector.get_words_vecs(
-                    self._train_reader.get_training_data(), 
-                    self._max_len, 
-                    lambda info: info[7],
-                    is_conv_2d
-                    ) 
+    else:
+      l_data = self._train_reader.get_training_data()
+
+    l_data = l_slice_data(l_data, start, end)
+    
+    return self._words_vector.get_words_vecs(
+                  l_data, 
+                  self._max_len, 
+                  lambda info: info[7],
+                  is_conv_2d
+                  ) 
              
-  def get_words_vec_training_data_np(self, is_conv_2d=False):
-    return np.array(self.get_words_vec_training_data(is_conv_2d), dtype='float32')
+  def get_words_vec_training_data_np(self, start = None, end = None, is_conv_2d=False):
+    return np.array(self.get_words_vec_training_data(start, end, is_conv_2d), dtype='float32')
   
-  def get_words_vec_validation_data(self, is_conv_2d=False):
+  def get_wrods_vec_training_data_matrix(self, is_conv_2d = False):
+    return WeiboMatrix(self, 
+                       lambda d: d.get_training_len(), 
+                       lambda d: d.get_words_vec_training_data_np(0,1, is_conv_2d).shape,
+                       lambda d, s, e: d.get_words_vec_training_data_np(s, e, is_conv_2d)  
+                       )
+  
+  def get_words_vec_validation_data(self, start = None, end = None, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
       return []
+    l_data = self._train_reader.get_validation_data()
+    l_data = l_slice_data(l_data, start, end)
     return self._words_vector.get_words_vecs(
-                  self._train_reader.get_validation_data(), 
+                  l_data, 
                   self._max_len, 
                   lambda info: info[7],
                   is_conv_2d
                   )
     
-  def get_words_vec_validation_data_np(self, is_conv_2d=False):
-    return np.array(self.get_words_vec_validation_data(is_conv_2d), dtype='float32')
+  def get_words_vec_validation_data_np(self, start=None, end=None, is_conv_2d=False):
+    return np.array(self.get_words_vec_validation_data(start, end, is_conv_2d), dtype='float32')
+
+  def get_words_vec_validation_data_matrix(self, is_conv_2d=False):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_validation_len(), 
+                       lambda d: d.get_words_vec_validation_data_np(0,1, is_conv_2d).shape,
+                       lambda d, s, e: d.get_words_vec_validation_data_np(s, e, is_conv_2d)  
+                       )
   
-  
-  def get_words_vec_predict_data(self, is_conv_2d=False):
+  def get_words_vec_predict_data(self, start=None, end=None, is_conv_2d=False):
     if self._words_vector is None:
       return []
     if self._predict_reader is None:
       return []
-    return self._words_vector.get_words_vecs(self._predict_reader.data(), self._max_len, 
+    l_data = self._predict_reader.data()
+    l_data = l_slice_data(l_data, start, end)
+    return self._words_vector.get_words_vecs(l_data, self._max_len, 
                                              lambda info: info[4], is_conv_2d)
   
-  def get_words_vec_predict_data_np(self, is_conv_2d=False):
-    return np.array(self.get_words_vec_predict_data(is_conv_2d), dtype='float32')
+  def get_words_vec_predict_data_np(self, start=None, end=None, is_conv_2d=False):
+    return np.array(self.get_words_vec_predict_data(start, end, is_conv_2d), dtype='float32')
+  
+  def get_words_vec_predict_data_matrix(self, is_conv_2d=False):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_prediction_len(), 
+                       lambda d: d.get_words_vec_predict_data_np(0,1, is_conv_2d).shape,
+                       lambda d, s, e: d.get_words_vec_predict_data_np(s, e, is_conv_2d)  
+                       )
   
     
-  def get_ppl_training_data(self):
+  def get_ppl_training_data(self, start=None, end=None):
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
-      return self._ppl_idx_table.get_ppls_idx(self._train_reader.data(), lambda info: info[0])
+      l_data = self._train_reader.data()
     else:
-      return self._ppl_idx_table.get_ppls_idx(self._train_reader.get_training_data(), lambda info: info[0])
+      l_data = self._train_reader.get_training_data()
+      
+    l_data = l_slice_data(l_data, start, end)
+    
+    return self._ppl_idx_table.get_ppls_idx(l_data, lambda info: info[0])
 
-  def get_ppl_training_data_np(self):
-    return np.array( self.get_ppl_training_data(), dtype='int' )
+  def get_ppl_training_data_np(self, start=None, end=None):
+    return np.array( self.get_ppl_training_data(start, end), dtype='int' )
+
+  def get_ppl_training_data_matrix(self):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_training_len(), 
+                       lambda d: d.get_ppl_training_data_np(0,1).shape,
+                       lambda d, s, e: d.get_ppl_training_data_np(s, e)  
+                       )
   
-  def get_ppl_validation_data(self):
+  def get_ppl_validation_data(self, start=None, end=None):
     if self._train_reader is None or self._is_init_all_tr:
       return []
-    return self._ppl_idx_table.get_ppls_idx(self._train_reader.get_validation_data(), lambda info: info[0])
+    return self._ppl_idx_table.get_ppls_idx(
+                        l_slice_data(self._train_reader.get_validation_data(), start, end), 
+                        lambda info: info[0]
+                        )
   
-  def get_ppl_validation_data_np(self):
+  def get_ppl_validation_data_np(self, start=None, end=None):
     return np.array(self.get_ppl_validation_data(), dtype='int')
   
-  def get_ppl_predict_data(self):
+  def get_ppl_validation_data_matrix(self):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_validation_len(), 
+                       lambda d: d.get_ppl_validation_data_np(0,1).shape,
+                       lambda d, s, e: d.get_ppl_validation_data_np(s, e)  
+                       )
+  
+  def get_ppl_predict_data(self, start=None, end=None):
     if self._predict_reader is None:
       return []
-    return self._ppl_idx_table.get_ppls_idx(self._predict_reader.data(), lambda info: info[0])
+    return self._ppl_idx_table.get_ppls_idx(
+                        l_slice_data(self._predict_reader.data(), start, end), 
+                        lambda info: info[0]
+                        )
   
-  def get_ppl_predict_data_np(self):
-    return np.array(self.get_ppl_predict_data(), dtype='int')
+  def get_ppl_predict_data_np(self, start=None, end=None):
+    return np.array(self.get_ppl_predict_data(start, end), dtype='int')
   
-  def get_training_data_gt(self):
+  def get_ppl_predict_data_matrix(self):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_prediction_len(), 
+                       lambda d: d.get_ppl_predict_data_np(0,1).shape,
+                       lambda d, s, e: d.get_ppl_predict_data_np(s, e)  
+                       )
+  
+  def get_training_data_gt(self, start=None, end=None):
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
-      return [[info[3], info[4], info[5]] for info in self._train_reader.data()]
+      return [[info[3], info[4], info[5]] for info in 
+              l_slice_data(self._train_reader.data(), start, end)]
     else:
-      return [[info[3], info[4], info[5]] for info in self._train_reader.get_training_data()]
+      return [[info[3], info[4], info[5]] for info in 
+              l_slice_data(self._train_reader.get_training_data(), start, end)]
   
-  def get_training_data_gt_np(self):
-    return np.array(self.get_training_data_gt(), dtype='float32')
+  def get_training_data_gt_np(self, start=None, end=None):
+    return np.array(self.get_training_data_gt(start, end), dtype='float32')
+  
+  def get_training_data_gt_matrix(self):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_training_len(), 
+                       lambda d: d.get_training_data_gt_np(0,1).shape,
+                       lambda d, s, e: d.get_training_data_gt_np(s, e)  
+                       )
     
-  def get_validation_data_gt(self):
+  def get_validation_data_gt(self, start=None, end=None):
     if self._train_reader is None:
       return []
-    return [[info[3], info[4], info[5]] for info in self._train_reader.get_validation_data()]
+    return [[info[3], info[4], info[5]] for info in 
+            l_slice_data(self._train_reader.get_validation_data(), start, end)]
   
-  def get_validation_data_gt_np(self):
-    return np.array(self.get_validation_data_gt(), dtype='float32')
+  def get_validation_data_gt_np(self, start=None, end=None):
+    return np.array(self.get_validation_data_gt(start, end), dtype='float32')
+  
+  def get_validation_data_gt_matrix(self):  
+    return WeiboMatrix(self, 
+                       lambda d: d.get_validation_len(), 
+                       lambda d: d.get_validation_data_gt_np(0,1).shape,
+                       lambda d, s, e: d.get_validation_data_gt_np(s, e)  
+                       )
   
   def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True, is_print=False):
     missing={}
