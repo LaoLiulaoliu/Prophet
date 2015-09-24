@@ -14,7 +14,6 @@ from prophet.models import *
 import theano
 import theano.compile
 from theano.compile import monitormode
-from prophet.combine_model import predict_words
 
                     
 dim=100
@@ -23,7 +22,7 @@ save_dir = "gen_nn_model"
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
-
+print("Training conv2d model")
 dataset = WeiboDataset(10000)
 print('Loading the data...')
 dataset.load_data(

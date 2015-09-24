@@ -21,7 +21,7 @@ save_dir = "gen_nn_model"
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
-
+print("Training combine model")
 dataset = WeiboDataset()
 print('Loading the data...')
 dataset.load_data(
