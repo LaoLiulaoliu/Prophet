@@ -64,7 +64,7 @@ def weibo_act(x):
   return T.switch(T.lt(x, 100000), T.abs_(x), 100000)
 
 def build_combine_model(max_ppl, dim_proj=300, vec_dim=100, 
-                        lstm_hidden=256, dim_output=3, 
+                        lstm_hidden=512, dim_output=3, 
                         saved_filename=None, is_output=True):
   #ppl_model = build_ppl_context_model(max_ppl, dim_proj, 
   #                          dim_output, is_output=False)
@@ -73,7 +73,7 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   #model.add(Dropout(0.7))
   ppl_model.add(Flatten())
   
-  dense1=1024
+  dense1=2048
   content_model = Sequential()
   content_model.add(LSTM(vec_dim, lstm_hidden, return_sequences=True))  # try using a GRU instead, for fun
   content_model.add(Dropout(0.2))
@@ -81,6 +81,9 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   content_model.add(Dropout(0.5))
   content_model.add(Dense(lstm_hidden, dense1, init='uniform', activation="tanh",
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
+  content_model.add(Dense(dense1, dense1, init='uniform', activation="tanh",
+                  W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
+  
      
   #content_model = build_content_contex_model_lstm(vec_dim, 
   #                            lstm_hidden, 
@@ -92,14 +95,14 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   model=Sequential()
   model.add(Merge([ppl_model, content_model], mode='concat', concat_axis=1))
   model.add(Dropout(0.6))
-  model.add(Dense(dim_proj+dense1, 2048, activation='tanh',
+  model.add(Dense(dim_proj+dense1, 1024, activation='tanh',
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
   model.add(Dropout(0.5))
-  model.add(Dense(2048, 4096, activation='tanh',
+  model.add(Dense(1024, 512, activation='tanh',
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01)))
   model.add(Dropout(0.8))
   if is_output:
-    model.add(Dense(4096, dim_output, init="uniform", activation=weibo_act,
+    model.add(Dense(512, dim_output, init="uniform", activation=weibo_act,
                   W_regularizer=l2(0.01), b_regularizer=l2(0.01), W_constraint = maxnorm(2)) )
 
   if saved_filename is not None and os.path.isfile(saved_filename):
