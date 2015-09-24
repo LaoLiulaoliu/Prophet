@@ -306,7 +306,7 @@ class WeiboDataset():
   def get_words_vec_training_data_np(self, start = None, end = None, is_conv_2d=False):
     return np.array(self.get_words_vec_training_data(start, end, is_conv_2d), dtype='float32')
   
-  def get_wrods_vec_training_data_matrix(self, is_conv_2d = False):
+  def get_words_vec_training_data_matrix(self, is_conv_2d = False):
     return WeiboMatrix(self, 
                        lambda d: d.get_training_len(), 
                        lambda d: d.get_words_vec_training_data_np(0,1, is_conv_2d).shape,

@@ -40,7 +40,7 @@ train_gt = dataset.get_training_data_gt_matrix()
 val_gt = dataset.get_validation_data_gt_matrix()
 print("The max len of words is: ", dataset.get_missing_info(is_valid=False, is_predict=False, is_max_len=True, is_print=False))
 
-train_words = dataset.get_wrods_vec_training_data_matrix(is_conv_2d=True)
+train_words = dataset.get_words_vec_training_data_matrix(is_conv_2d=True)
 #train_ppl = dataset.get_ppl_training_data_np()
 val_words = dataset.get_words_vec_validation_data_matrix(is_conv_2d=True)
 #val_ppl = dataset.get_ppl_validation_data_np()
