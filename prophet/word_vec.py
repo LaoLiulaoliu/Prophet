@@ -8,6 +8,8 @@ import math
 import string
 from collections import defaultdict
 
+import numpy as np
+import numpy.linalg as LA
 
 class WordVec(object):
     def __init__(self, filename=None):
@@ -76,7 +78,8 @@ class WordVec(object):
         如果想让一个文档看起来和一个特定主题更相关，你可能会通过不断重复同一个词，来增加它包含一个主题的可能性。
         在某种程度上，我们得到了一个在该词的信息价值上衰减的结果。所以我们需要按比例缩小那些在一篇文档中频繁出现的单词的值。
         """
-        norm = math.sqrt( sum([word**2 for word in one_bag]) )
+        norm = LA.norm(np.asarray(one_bag))
+        # norm = math.sqrt( sum([word**2 for word in one_bag]) )
         return [word / norm for word in one_bag]
 
 
@@ -100,7 +103,6 @@ class WordVec(object):
         return np.mat(idf_matrix)
 
     def tf_idf(self):
-        import numpy as np
         words, Y = self.load_words()
         bag_words, vocabulary_dict = self.bag_word(words, Y)
         tf_matrix = np.mat(bag_words)
