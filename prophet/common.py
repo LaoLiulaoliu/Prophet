@@ -48,7 +48,7 @@ def build_precisio_stack(y_train, y):
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):
-  def __init__(self, n_epoch_training = 10, n_epoch_test = 5):
+  def __init__(self, n_epoch_training = 10, n_epoch_test = 5, val_saved_filename=None):
     super(WeiboPrecisionCallback, self).__init__()
     self._top_count = 0
     self._bottom_count = 0
@@ -56,6 +56,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     self._y = []
     self._n_epoch_training = n_epoch_training
     self._n_epoch_test = n_epoch_test
+    self._val_saved_filename = val_saved_filename
      
   def on_epoch_begin(self, epoch, logs={}):
     self._top_count = 0
@@ -91,6 +92,12 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
       precision_val = me.WeiboPrecision.precision_match(logs['val_more_func_1'], np.rint(logs['val_more_func_0']))
       precision_val_non_round = me.WeiboPrecision.precision_match(logs['val_more_func_1'], logs['val_more_func_0'])
       end_val = time.time()
+      if self._val_saved_filename is not None:
+        fd = open(self._val_saved_filename, 'w')
+        for gt, pre, pre_f in zip(logs['val_more_func_1'], np.rint(logs['val_more_func_0']), logs['val_more_func_0']):
+          fd.write('%d,%d,%d-%d,%d,%d-%f,%f,%f\n'%(gt[0], gt[1], gt[2], pre[0], pre[1], pre[2], pre_f[0], pre_f[1], pre_f[2]))
+        fd.close()
+        print("Saved %d valiation results to %s" % (len(logs['val_more_func_0']), self._val_saved_filename))
       print("On %d epoch, the %s precision is: %.4f, non-round: %.4f, calcuating time: %f" % (epoch, "validation", precision_val, precision_val_non_round, end_val-start_val))
       #f=theano.function([], weibo_loss_scaled_weighted(np.array(logs['val_more_func_1']), np.array(logs['val_more_func_0'])))
       #print("loss", f().mean())
