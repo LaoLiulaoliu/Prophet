@@ -9,6 +9,7 @@ from keras.regularizers import l2
 from keras.layers.recurrent import LSTM
 from keras.layers.convolutional import *
 import os
+import theano
 import theano.tensor as T
 from keras.constraints import *
 
@@ -110,7 +111,13 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
         
   return model
 
-def build_conv2d_model(nb_feat1=200, 
+def sharedX(X, dtype=theano.config.floatX, name=None):
+    return theano.shared(np.asarray(X, dtype=dtype), name=name)
+  
+def normal_init(shape):
+    return sharedX((2*np.random.randn(*shape)-1))
+  
+def build_conv2d_model(nb_feat1=32, 
                        words = 30, words_vec = 100, output_dim=3,
                        saved_filename=None, is_output=True):
 #   conv_model = Sequential()
@@ -131,21 +138,27 @@ def build_conv2d_model(nb_feat1=200,
   n_gram = 3
   w_decay = 0.0005
   conv_model = Sequential()
-  conv_model.add(Convolution2D(nb_feat1, 1, n_gram, words_vec, init="normal",
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(2)))
+  conv_model.add(Convolution2D(nb_feat1, 1, n_gram, words_vec, init="normal", subsample=(1,words_vec),
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(10)))
   conv_model.add(Activation('relu'))
-  conv_model.add(MaxPooling2D(poolsize=(words - n_gram + 1, 1)))
+  pool_size = 4
+  stride_size = 2
+  conv_model.add(MaxPooling2D(poolsize=(pool_size, 1), stride=(stride_size, 1)))
   #conv_model.add(Dropout(0.5))
   conv_model.add(Flatten())
-  conv_model.add(Dense(nb_feat1, 1024, activation="relu",
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
+  #dense1 = nb_feat1 #words - n_gram + 1
+  conv_size = words - n_gram + 1
+  dense1 = nb_feat1 * ((conv_size - pool_size) / stride_size + 1)
+  print("dense1: ", dense1)
+  conv_model.add(Dense(dense1, 2048, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(10) ))
   conv_model.add(Dropout(0.5))
-  conv_model.add(Dense(1024, 1024, activation="relu",
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(29) ))
-  conv_model.add(Dropout(0.5))
+  conv_model.add(Dense(2048, 2048, activation="relu",
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(10) ))
+  conv_model.add(Dropout(0.8))
   if is_output:
-    conv_model.add(Dense(1024, output_dim, activation=weibo_act,
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(2)))
+    conv_model.add(Dense(2048, output_dim, activation=weibo_act, init=normal_init,
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(1000)))
   
   if saved_filename is not None and os.path.isfile(saved_filename):
     conv_model.load_weights(saved_filename)
