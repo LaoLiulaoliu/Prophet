@@ -21,6 +21,15 @@ def weibo_loss_weighted(y_true, y_pred):
 def weibo_loss_scaled_weighted(y_true, y_pred):
   return (((T.abs_(y_pred - y_true)/(y_true+thre) * 10)**2)*weight_dev).sum(-1)
 
+def weibo_precision_loss(y_true, y_pred):
+  devs = T.abs_(y_pred - y_true) / (y_true + thre) * weight_dev
+  total_devs = devs.sum(-1)
+  
+  loss_factor = T.switch(y_true.sum(-1) > 100.0, y_true.sum(-1)*0.0 + 100.0, y_true.sum(-1)+1) 
+  loss = (total_devs ** 2) * (loss_factor)
+  switch_loss = T.switch(total_devs > 0.2, loss, loss*0)
+  return switch_loss
+
 # looks like very slow.
 def build_percision_funcs(y_train, y):
   thre = np.array([5.0,3.0,3.0], dtype='float32')
@@ -45,6 +54,34 @@ def build_percision_funcs(y_train, y):
 
 def build_precisio_stack(y_train, y):
   return [y_train, y]
+
+def rank_limit(limit=1000, alpha=0.2, beta=5):
+  """
+    let's say allow error rate is 0.2 for each prediction.
+    alpha = abs(pre - gt) / (gt + beta)
+    a is lower ground truth
+    b is upper ground truth
+    c is the prediction
+    (c - a) / (a + beta) = 0.2
+    (b - c) / (b + beta) = 0.2
+    c = 1.2*a + 0.2*beta
+    b = (c + 0.2*beta) / 0.8 
+    
+    we will loop from smallest number to largest
+    Returns:
+      [(a,c,b)]
+  """
+  last_b = -1
+  limit_list = []
+  for a in range(0, limit):
+    if a <= last_b:
+      continue
+    c = int(1.2*a+0.2*beta) 
+    b = int((c+0.2*beta)/0.8)
+    limit_list.append((a,c,b))
+    last_b = b
+  return limit_list
+
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):
