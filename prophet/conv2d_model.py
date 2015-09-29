@@ -15,7 +15,10 @@ import theano
 import theano.compile
 from theano.compile import monitormode
 
+from theano.sandbox.cuda import dnn
 
+print("cnn gpu status: ", dnn.dnn_available())
+#exit(1)
 #model = build_conv2d_model(words=140, saved_filename="gen_nn_model/conv2d_state.full_t.pkl")
 # w_limits = [1, 2, 3, 4, 5, 8, 10, 15, 20, 40, 100, 200, 300, 500, 1000]
 # counting = [0 for n in w_limits]
