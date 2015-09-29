@@ -74,22 +74,24 @@ def rank_limit(limit=1000, alpha=0.2, beta=5):
     a is lower ground truth
     b is upper ground truth
     c is the prediction
-    (c - a) / (a + beta) = 0.2
-    (b - c) / (b + beta) = 0.2
-    c = 1.2*a + 0.2*beta
-    b = (c + 0.2*beta) / 0.8 
+    (c - a) / (a + beta) = alpha
+    (b - c) / (b + beta) = alpha
+    c = (1+alpha)*a + alpha*beta
+    b = (c + alpha*beta) / 0.8
+    Note: alpha will be minus 0.0001 (very small number, since 0.2 is not valid) 
     
     we will loop from smallest number to largest
     Returns:
       [(a,c,b)]
   """
+  alpha -= 0.0001
   last_b = -1
   limit_list = []
   for a in range(0, limit):
     if a <= last_b:
       continue
-    c = int(1.2*a+0.2*beta) 
-    b = int((c+0.2*beta)/0.8)
+    c = int((1+alpha)*a+alpha*beta) 
+    b = int((c+alpha*beta)/(1-alpha))
     limit_list.append((a,c,b))
     last_b = b
   return limit_list
