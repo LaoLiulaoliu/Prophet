@@ -63,14 +63,18 @@ print("-- predict data missing %d users, %d weibo" % (missing_info['pre'], missi
 max_features = data.get_ppl_max_count()
 
 print('Build model...')
-model = build_ppl_context_model(max_features, dim_proj, dim_output)
+model = build_ppl_context_model(max_features, dim_proj, dim_output, is_ranking=is_ranking)
 #model.compile(loss=weibo_loss, optimizer='rmsprop')
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 #sgd = SGD(lr=2, decay=1e-6, momentum=0.9, nesterov=True)
 #use weibo_loss_weighted with learning rate 2 is good.
 #model.compile(loss=weibo_loss_weighted, optimizer=sgd)
-obj = RankedWeiboLoss(data)
-model.compile(loss=obj.calculate_loss, optimizer=sgd, other_func_init=build_precisio_stack)
+if is_ranking:
+  obj = RankedWeiboLoss(data)
+  loss_func = obj.calculate_loss
+else:
+  loss_func = weibo_loss_weighted
+model.compile(loss=loss_func, optimizer=sgd, other_func_init=build_precisio_stack)
 #model.compile(loss="mse", optimizer=sgd)
 
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state2.full_t.10.f10.pkl", save_best_only=False)
@@ -83,9 +87,16 @@ model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True,
 #model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint], validation_data=(val_ppl, val_gt))
 
 pre=model.predict(val_ppl, batch_size=128)
+if is_ranking:
+  pre = data.translate_ranking(pre)
+  val_gt = data.get_validation_data_gt_np()
+  
 print("validation weibo acc: ", WeiboPrecision.precision_match(val_gt, pre))
 
 pre=model.predict(predict_ppl, batch_size=128)
+if is_ranking:
+  pre = data.translate_ranking(pre)
+  
 data.save_predictions(pre, './ppl_result2.txt')
 
 
