@@ -29,6 +29,7 @@ save = True
 is_ranking = True
 #load_model = False
 #train_model = True
+print("Training ppl context")
 
 save_dir = "gen_nn_model"
 if not os.path.exists(save_dir):
@@ -43,7 +44,7 @@ if is_ranking:
   data = WeiboDataset(ranking_func=rank_limit)
 else:
   data = WeiboDataset()
-data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=False)
+data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=True)
 
 
 train_gt = data.get_training_data_gt_np(is_ranking=is_ranking)
