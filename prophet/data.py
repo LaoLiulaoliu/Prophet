@@ -469,6 +469,9 @@ class WeiboDataset():
   
   def translate_ranking(self, ranking):
     #print(ranking, len(self._f_ranks_np))
+    if ranking.dtype != 'int32':
+      ranking = np.array(np.rint(ranking), dtype='int32') 
+      
     f = ranking[:,0]
     f[f>=len(self._f_ranks_np)] = len(self._f_ranks_np)-1
     f[f<0] = 0
@@ -480,7 +483,11 @@ class WeiboDataset():
     l[l>=len(self._l_ranks_np)] = len(self._l_ranks_np)-1
     l[l<0] = 0
     if self._f_ranks_np is not None:
+      #print(self._f_ranks)
+      #print(self._f_ranks_np)
+      #print(f[0:10])
       f = self._f_ranks_np[f]
+      #print(f[0:10])
     if self._c_ranks_np is not None:
       c = self._c_ranks_np[c]
     if self._l_ranks_np is not None:
