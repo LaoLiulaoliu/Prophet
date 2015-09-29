@@ -43,10 +43,11 @@ def collect_words_vec(word_model, words, max_len, vector_size):
   return vec
 
 def search_rank_idx(score, ranks):
-  for idx, (lower, r_v, upper) in enumerate(ranks):
-        if lower <= score and upper >= score:
-          return idx
-        
+  score=int(score)
+  for idx, (lower, r_v, upper) in enumerate(ranks):  
+    if lower <= score and upper >= score:
+      return idx
+  
   return score
   
 class WordVectors():
@@ -470,11 +471,14 @@ class WeiboDataset():
     #print(ranking, len(self._f_ranks_np))
     f = ranking[:,0]
     f[f>=len(self._f_ranks_np)] = len(self._f_ranks_np)-1
+    f[f<0] = 0
     #print(f)
     c = ranking[:,1]
     c[c>=len(self._c_ranks_np)] = len(self._c_ranks_np)-1
+    c[c<0] = 0
     l = ranking[:,2]
     l[l>=len(self._l_ranks_np)] = len(self._l_ranks_np)-1
+    l[l<0] = 0
     if self._f_ranks_np is not None:
       f = self._f_ranks_np[f]
     if self._c_ranks_np is not None:
@@ -496,6 +500,34 @@ class WeiboDataset():
     if self._l_ranks is not None:
       l = search_rank_idx(l, self._l_ranks)
     return [f, c, l]
+
+  @staticmethod
+  def _get_weighted_metric(ranks):
+    l = []
+    for lower, pre, upper in ranks:
+      weights = 1
+      if pre > 100:
+        weights = 101
+      else:
+        weights = pre + 1
+      l.append(weights)
+    return l
+  
+  def get_ranked_weighted_metric(self):
+    f = []
+    if self._f_ranks is not None:
+      f = WeiboDataset._get_weighted_metric(self._f_ranks)
+    c = []
+    if self._c_ranks is not None:
+      c = WeiboDataset._get_weighted_metric(self._c_ranks)
+    l = []
+    if self._l_ranks is not None:
+      l = WeiboDataset._get_weighted_metric(self._l_ranks)
+    return (f, c, l)
+  
+  def get_ranked_weighted_metric_np(self):
+    f, c, l = self.get_ranked_weighted_metric()
+    return (np.array(f, dtype='int32'), np.array(c, dtype='int32'), np.array(l, dtype='int32')) 
     
   def get_validation_data_gt(self, start=None, end=None, is_ranking=False):
     if self._train_reader is None:

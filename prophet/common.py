@@ -12,6 +12,18 @@ import time
 thre = np.array([5.0,3.0,3.0], dtype='float32')
 weight_dev = np.array([0.5,0.25,0.25], dtype='float32')
 
+class RankedWeiboLoss():
+  def __init__(self, dataset):
+    self._f, self._c, self._l = dataset.get_ranked_weighted_metric_np()
+    
+  def calculate_loss(self, y_true, y_pred):
+    y_true_int = T.cast(y_true, dtype='int32')
+    s0 = T.constant(self._f, 'f')[y_true_int[:,0]]
+    s1 = T.constant(self._c, 'c')[y_true_int[:,1]]
+    s2 = T.constant(self._l, 'l')[y_true_int[:,2]]
+    total = s0+s1+s2
+    return T.switch(total > 100, 101, total+1)*(((y_pred-y_true)**2).sum(-1))
+
 def weibo_loss(y_true, y_pred):
     return ((T.abs_(y_pred - y_true)/(y_true+thre))**2).sum(-1)
 

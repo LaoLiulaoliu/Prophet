@@ -68,7 +68,8 @@ sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 #sgd = SGD(lr=2, decay=1e-6, momentum=0.9, nesterov=True)
 #use weibo_loss_weighted with learning rate 2 is good.
 #model.compile(loss=weibo_loss_weighted, optimizer=sgd)
-model.compile(loss="mse", optimizer=sgd, other_func_init=build_precisio_stack)
+obj = RankedWeiboLoss(data)
+model.compile(loss=obj.calculate_loss, optimizer=sgd, other_func_init=build_precisio_stack)
 #model.compile(loss="mse", optimizer=sgd)
 
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state2.full_t.10.f10.pkl", save_best_only=False)
@@ -76,6 +77,7 @@ if is_ranking:
   precision = WeiboPrecisionCallback(1, 1, dataset_ranking=data)
 else:
   precision = WeiboPrecisionCallback(1, 1)
+
 model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_ppl, val_gt))
 #model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint], validation_data=(val_ppl, val_gt))
 
