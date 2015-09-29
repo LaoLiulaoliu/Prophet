@@ -42,6 +42,12 @@ def collect_words_vec(word_model, words, max_len, vector_size):
       offset += 1      
   return vec
 
+def search_rank_idx(score, ranks):
+  for idx, (lower, r_v, upper) in enumerate(ranks):
+        if lower <= score and upper >= score:
+          return idx
+        
+  return score
   
 class WordVectors():
   def __init__(self):
@@ -165,7 +171,7 @@ class WeiboDataset():
   """
     It creates and convert all the data
   """
-  def __init__(self, max_limit = None):
+  def __init__(self, max_limit = None, ranking_func = None):
     self._train_reader = None
     self._predict_reader = None
     self._ppl_idx_table = PplIdxTable()
@@ -173,6 +179,18 @@ class WeiboDataset():
     self._words_vector = None
     self._max_len = None
     self._max_limit = max_limit
+    if ranking_func is not None:
+      self._f_ranks = ranking_func(1000000, 0.2, 5)
+      self._f_ranks_np = np.array([ pred for l, pred, u in self._f_ranks])
+      self._c_ranks = ranking_func(1000000, 0.2, 3)
+      self._c_ranks_np = np.array([ pred for l, pred, u in self._c_ranks])
+      self._l_ranks = ranking_func(1000000, 0.2, 3)
+      self._l_ranks_np = np.array([ pred for l, pred, u in self._l_ranks])
+    else:
+      self._f_ranks = None
+      self._c_ranks = None
+      self._l_ranks = None
+      
     
   def max_len(self):
     return self._max_len
@@ -418,43 +436,86 @@ class WeiboDataset():
                        lambda d, s, e: d.get_ppl_predict_data_np(s, e)  
                        )
   
-  def get_training_data_gt(self, start=None, end=None):
+  def get_training_data_gt(self, start=None, end=None, is_ranking=False):
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
-      return [[info[3], info[4], info[5]] for info in 
-              l_slice_data(self._train_reader.data(), start, end)]
+      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking)  
+              for info in l_slice_data(self._train_reader.data(), start, end)]
     else:
-      return [[info[3], info[4], info[5]] for info in 
-              l_slice_data(self._train_reader.get_training_data(), start, end)]
+      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking) 
+               for info in l_slice_data(self._train_reader.get_training_data()
+                                        , start, end)]
   
-  def get_training_data_gt_np(self, start=None, end=None):
-    return np.array(self.get_training_data_gt(start, end), dtype='float32')
+  def get_training_data_gt_np(self, start=None, end=None, is_ranking=False):
+    return np.array(self.get_training_data_gt(start, end, is_ranking), 
+                    dtype='float32')
   
-  def get_training_data_gt_matrix(self):  
+  def get_training_data_gt_matrix(self, is_ranking=False):  
     return WeiboMatrix(self, 
                        lambda d: d.get_training_len(), 
                        lambda d: d.get_training_data_gt_np(0,1).shape,
-                       lambda d, s, e: d.get_training_data_gt_np(s, e)  
+                       lambda d, s, e: d.get_training_data_gt_np(s, e, is_ranking)  
                        )
+
+  def translate_ranked_value(self, idx, type="forward"):
+    if type == "forward" and self._f_ranks is not None:
+      return self._f_ranks[idx][1]
+    if type == "comment" and self._c_ranks is not None:
+      return self._c_ranks[idx][1]
+    if type == "like" and self._l_ranks is not None:
+      return self._l_ranks[idx][1]
+  
+  def translate_ranking(self, ranking):
+    #print(ranking, len(self._f_ranks_np))
+    f = ranking[:,0]
+    f[f>=len(self._f_ranks_np)] = len(self._f_ranks_np)-1
+    #print(f)
+    c = ranking[:,1]
+    c[c>=len(self._c_ranks_np)] = len(self._c_ranks_np)-1
+    l = ranking[:,2]
+    l[l>=len(self._l_ranks_np)] = len(self._l_ranks_np)-1
+    if self._f_ranks_np is not None:
+      f = self._f_ranks_np[f]
+    if self._c_ranks_np is not None:
+      c = self._c_ranks_np[c]
+    if self._l_ranks_np is not None:
+      l = self._l_ranks_np[l]
     
-  def get_validation_data_gt(self, start=None, end=None):
+    return np.array([f,c,l]).transpose()
+    
+  
+  def get_ranked_value(self, f, c, l, is_ranking):
+    if not is_ranking:
+      return [f, c, l]
+    
+    if self._f_ranks is not None:
+      f = search_rank_idx(f, self._f_ranks)
+    if self._c_ranks is not None:
+      c = search_rank_idx(c, self._c_ranks)
+    if self._l_ranks is not None:
+      l = search_rank_idx(l, self._l_ranks)
+    return [f, c, l]
+    
+  def get_validation_data_gt(self, start=None, end=None, is_ranking=False):
     if self._train_reader is None:
       return []
-    return [[info[3], info[4], info[5]] for info in 
-            l_slice_data(self._train_reader.get_validation_data(), start, end)]
+    return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking) 
+             for info in l_slice_data(self._train_reader.get_validation_data(),
+                                       start, end)]
   
-  def get_validation_data_gt_np(self, start=None, end=None):
-    return np.array(self.get_validation_data_gt(start, end), dtype='float32')
+  def get_validation_data_gt_np(self, start=None, end=None, is_ranking=False):
+    return np.array(self.get_validation_data_gt(start, end, is_ranking), dtype='float32')
   
-  def get_validation_data_gt_matrix(self):  
+  def get_validation_data_gt_matrix(self, is_ranking=False):  
     return WeiboMatrix(self, 
                        lambda d: d.get_validation_len(), 
                        lambda d: d.get_validation_data_gt_np(0,1).shape,
-                       lambda d, s, e: d.get_validation_data_gt_np(s, e)  
+                       lambda d, s, e: d.get_validation_data_gt_np(s, e, is_ranking)  
                        )
   
-  def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True, is_print=False):
+  def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True, 
+                       is_print=False):
     missing={}
     if is_valid and self._train_reader is not None:
       self._ppl_idx_table.reset_missing()

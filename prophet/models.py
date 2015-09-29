@@ -13,14 +13,17 @@ import theano
 import theano.tensor as T
 from keras.constraints import *
 
+def weibo_act_zero(x):
+  return T.switch(T.lt(x, 100000), T.switch(T.lt(x, 0), 0, x), 100000)
+
 def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename = None, is_output=True):
   model = Sequential()
   model.add(Embedding(max_ppl, dim_proj, init="uniform"))
   model.add(Dropout(0.7))
   model.add(Flatten())
   if is_output:
-    model.add(Dense(dim_proj, dim_output, init="uniform", activation="linear",
-                  W_regularizer=l2(0.01)))
+    model.add(Dense(dim_proj, dim_output, init="uniform", activation=weibo_act_zero,
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(10)))
   #else:
   #  model.add(Dense(dim_proj, 1024, init="uniform", activation="linear",
   #                W_regularizer=l2(0.01)))
@@ -63,6 +66,8 @@ def build_content_contex_model_lstm(in_dim=100, hidden1=512, dense1=1024,
 
 def weibo_act(x):
   return T.switch(T.lt(x, 100000), T.abs_(x), 100000)
+
+
 
 def build_combine_model(max_ppl, dim_proj=300, vec_dim=100, 
                         lstm_hidden=512, dim_output=3, 

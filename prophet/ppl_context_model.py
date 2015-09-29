@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+from gensim.test.test_parsing import dataset
 prophet_root = '/home/xijing/Work/weibo/Prophet'
 import sys
 sys.path.insert(0, prophet_root)
@@ -13,7 +14,7 @@ from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.callbacks import ModelCheckpoint
 
 from prophet.metric import WeiboPrecision
-from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, build_percision_funcs, WeiboPrecisionCallback, build_precisio_stack
+from prophet.common import *
 
 from prophet.data import WeiboDataset
 from prophet.models import *
@@ -25,6 +26,7 @@ dim_proj = 300  # embedding space dimension
 dim_output = 3 # the output predicting values.
 
 save = True
+is_ranking = True
 #load_model = False
 #train_model = True
 
@@ -37,13 +39,16 @@ model_save_fname = "ppl_context.pkl"
 print('Loading the data...')
 import time
 start = time.time()
-data = WeiboDataset()
-data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=True)
+if is_ranking:
+  data = WeiboDataset(ranking_func=rank_limit)
+else:
+  data = WeiboDataset()
+data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=False)
 
 
-train_gt = data.get_training_data_gt_np()
+train_gt = data.get_training_data_gt_np(is_ranking=is_ranking)
 train_ppl = data.get_ppl_training_data_np()
-val_gt = data.get_validation_data_gt_np()
+val_gt = data.get_validation_data_gt_np(is_ranking=is_ranking)
 val_ppl = data.get_ppl_validation_data_np()
 
 predict_ppl = data.get_ppl_predict_data_np()
@@ -63,11 +68,16 @@ sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
 #sgd = SGD(lr=2, decay=1e-6, momentum=0.9, nesterov=True)
 #use weibo_loss_weighted with learning rate 2 is good.
 #model.compile(loss=weibo_loss_weighted, optimizer=sgd)
-model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
+model.compile(loss="mse", optimizer=sgd, other_func_init=build_precisio_stack)
+#model.compile(loss="mse", optimizer=sgd)
 
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state2.full_t.10.f10.pkl", save_best_only=False)
-precision = WeiboPrecisionCallback()
+if is_ranking:
+  precision = WeiboPrecisionCallback(1, 1, dataset_ranking=data)
+else:
+  precision = WeiboPrecisionCallback(1, 1)
 model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint, precision], validation_data=(val_ppl, val_gt))
+#model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint], validation_data=(val_ppl, val_gt))
 
 pre=model.predict(val_ppl, batch_size=128)
 print("validation weibo acc: ", WeiboPrecision.precision_match(val_gt, pre))

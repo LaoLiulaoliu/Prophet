@@ -85,7 +85,7 @@ def rank_limit(limit=1000, alpha=0.2, beta=5):
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):
-  def __init__(self, n_epoch_training = 10, n_epoch_test = 5, val_saved_filename=None):
+  def __init__(self, n_epoch_training = 10, n_epoch_test = 5, val_saved_filename=None, dataset_ranking = None):
     super(WeiboPrecisionCallback, self).__init__()
     self._top_count = 0
     self._bottom_count = 0
@@ -94,6 +94,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     self._n_epoch_training = n_epoch_training
     self._n_epoch_test = n_epoch_test
     self._val_saved_filename = val_saved_filename
+    self._dataset_ranking = dataset_ranking
      
   def on_epoch_begin(self, epoch, logs={}):
     self._top_count = 0
@@ -119,19 +120,35 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     traing_msg=""
     if is_train_on:
       start=time.time()
-      precision = me.WeiboPrecision.precision_match(self._y, self._y_pred) 
+      if self._dataset_ranking is not None:
+        y_pred = self._dataset_ranking.translate_ranking(np.int16(np.rint(self._y_pred)))
+        y = self._dataset_ranking.get_training_data_gt_np()
+      else:
+        y_pred = self._y_pred
+        y = self._y
+      precision = me.WeiboPrecision.precision_match(y, y_pred) 
       end=time.time()
     
     if is_val_on:
       traing_msg="training"
       start_val = time.time()
       #print(logs['val_more_func_1'], logs['val_more_func_0'])
-      precision_val = me.WeiboPrecision.precision_match(logs['val_more_func_1'], np.rint(logs['val_more_func_0']))
-      precision_val_non_round = me.WeiboPrecision.precision_match(logs['val_more_func_1'], logs['val_more_func_0'])
+      if self._dataset_ranking is not None:
+        y_pred = self._dataset_ranking.translate_ranking(np.int16(np.rint(logs['val_more_func_0'])))
+        #y = logs['val_more_func_1']
+        y = self._dataset_ranking.get_validation_data_gt_np()
+        precision_val = me.WeiboPrecision.precision_match(y, y_pred)
+        precision_val_non_round = precision_val
+        
+      else:
+        y_pred = np.rint(logs['val_more_func_0'])
+        y = logs['val_more_func_1']
+        precision_val = me.WeiboPrecision.precision_match(y, y_pred)
+        precision_val_non_round = me.WeiboPrecision.precision_match(y, logs['val_more_func_0'])
       end_val = time.time()
       if self._val_saved_filename is not None:
         fd = open(self._val_saved_filename, 'w')
-        for gt, pre, pre_f in zip(logs['val_more_func_1'], np.rint(logs['val_more_func_0']), logs['val_more_func_0']):
+        for gt, pre, pre_f in zip(y, y_pred, logs['val_more_func_0']):
           fd.write('%d,%d,%d-%d,%d,%d-%f,%f,%f\n'%(gt[0], gt[1], gt[2], pre[0], pre[1], pre[2], pre_f[0], pre_f[1], pre_f[2]))
         fd.close()
         print("Saved %d valiation results to %s" % (len(logs['val_more_func_0']), self._val_saved_filename))
