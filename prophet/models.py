@@ -16,14 +16,18 @@ from keras.constraints import *
 def weibo_act_zero(x):
   return T.switch(T.lt(x, 100000), T.switch(T.lt(x, 0), 0, x), 100000)
 
-def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename = None, is_output=True):
+def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename = None, is_output=True, is_ranking = True):
   model = Sequential()
   model.add(Embedding(max_ppl, dim_proj, init="uniform"))
   model.add(Dropout(0.7))
   model.add(Flatten())
   if is_output:
+    if is_ranking:
+      max_norm_v = 10
+    else:
+      max_norm_v = 1000
     model.add(Dense(dim_proj, dim_output, init="uniform", activation=weibo_act_zero,
-                  W_regularizer=l2(0.01), W_constraint = maxnorm(10)))
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
   #else:
   #  model.add(Dense(dim_proj, 1024, init="uniform", activation="linear",
   #                W_regularizer=l2(0.01)))
@@ -122,9 +126,9 @@ def sharedX(X, dtype=theano.config.floatX, name=None):
 def normal_init(shape):
     return sharedX((2*np.random.randn(*shape)-1))
   
-def build_conv2d_model(nb_feat1=32, 
+def build_conv2d_model(nb_feat1=256, 
                        words = 30, words_vec = 100, output_dim=3,
-                       saved_filename=None, is_output=True):
+                       saved_filename=None, is_output=True, is_ranking = True):
 #   conv_model = Sequential()
 #   conv_model.add(Convolution2D(nb_feat1, 1, nb_row, nb_col, 
 #                                init="normal" ,border_mode="full"))
@@ -155,15 +159,22 @@ def build_conv2d_model(nb_feat1=32,
   conv_size = words - n_gram + 1
   dense1 = nb_feat1 * ((conv_size - pool_size) / stride_size + 1)
   print("dense1: ", dense1)
+  max_norm_v = 10
+  if is_ranking:
+    max_norm_v = 1
   conv_model.add(Dense(dense1, 2048, activation="relu",
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(10) ))
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(max_norm_v) ))
   conv_model.add(Dropout(0.5))
   conv_model.add(Dense(2048, 2048, activation="relu",
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(10) ))
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(max_norm_v) ))
   conv_model.add(Dropout(0.8))
   if is_output:
+    if is_ranking:
+      max_norm_v = 2
+    else:
+      max_norm_v = 1000
     conv_model.add(Dense(2048, output_dim, activation=weibo_act, init=normal_init,
-                  W_regularizer=l2(w_decay), W_constraint = maxnorm(1000)))
+                  W_regularizer=l2(w_decay), W_constraint = maxnorm(max_norm_v)))
   
   if saved_filename is not None and os.path.isfile(saved_filename):
     conv_model.load_weights(saved_filename)
