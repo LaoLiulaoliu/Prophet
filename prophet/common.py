@@ -67,6 +67,9 @@ def build_percision_funcs(y_train, y):
 def build_precisio_stack(y_train, y):
   return [y_train, y]
 
+def build_precisio_stack_softmax(y_train, y):
+  return [T.argmax(y_train[0], -1), T.argmax(y[0], -1)]
+
 def rank_limit(limit=1000, alpha=0.2, beta=5):
   """
     let's say allow error rate is 0.2 for each prediction.
@@ -96,6 +99,13 @@ def rank_limit(limit=1000, alpha=0.2, beta=5):
     last_b = b
   return limit_list
 
+def to_categorical(gt, classes):
+  Y = np.zeros(gt.shape + (classes,))
+  for row in range(gt.shape[0]):
+    for col in range(gt.shape[1]):
+      i = gt[row,col]
+      Y[row,col,i] = 1
+  return Y
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):

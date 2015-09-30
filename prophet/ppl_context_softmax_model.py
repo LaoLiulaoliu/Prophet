@@ -43,7 +43,7 @@ print('Loading the data...')
 import time
 start = time.time()
 is_ranking=True
-data = WeiboDataset(10000, ranking_func=rank_limit)
+data = WeiboDataset(ranking_func=rank_limit)
 data.load_data("./data2/weibo_train_data.txt", "./data2/weibo_predict_data.txt", is_init_ppl_standard=True)
 
 
@@ -97,29 +97,22 @@ else:
 #model.compile(loss=loss_func, optimizer=sgd, other_func_init=build_precisio_stack)
 #model.compile(loss="mse", optimizer=sgd)
 #model.compile(sgd, loss={'softmax_f':'binary_crossentropy', 'softmax_c':'binary_crossentropy', 'softmax_l':'binary_crossentropy'})
-model.compile(sgd, loss={'softmax3':'categorical_crossentropy'})
+model.compile(sgd, loss={'softmax3':'categorical_crossentropy'}, other_func_init=build_precisio_stack_softmax)
 
 checkpoint = ModelCheckpoint(save_dir+"/ppl_context_state2.full_t.10.f10.pkl", save_best_only=False)
 if is_ranking:
-  precision = WeiboPrecisionCallback(1, 1, dataset_ranking=data)
+  precision = WeiboPrecisionCallback(1, 1, dataset_ranking=data, val_saved_filename="./test_saved_ppl_softmax.val")
 else:
   precision = WeiboPrecisionCallback(1, 1)
 #train_gt = np.reshape(train_gt, train_gt.shape + (1,))
-def to_categorical(gt, classes):
-  Y = np.zeros(gt.shape + (classes,))
-  for row in range(gt.shape[0]):
-    for col in range(gt.shape[1]):
-      i = gt[row,col]
-      Y[row,col,i] = 1
-  return Y
        
 train_gt = to_categorical(train_gt, max_ranks_len)
 val_gt = to_categorical(val_gt, max_ranks_len)
 #val_gt = np.reshape(val_gt, val_gt.shape + (1,))
-print(train_ppl.shape)
-print(train_gt.shape)
+#print(train_ppl.shape)
+#print(train_gt.shape)
 #model.fit({'input':train_ppl, 'softmax_f':train_gt[:,0], 'softmax_c':train_gt[:,1], 'softmax_l':train_gt[:,2]}, batch_size=256, nb_epoch=120, callbacks=[checkpoint], validation_data={'input':val_ppl, 'softmax_f':val_gt[:,0], 'softmax_c':val_gt[:,1], 'softmax_l':val_gt[:,2]})
-model.fit({'input':train_ppl, 'softmax3':train_gt}, batch_size=256, nb_epoch=20, callbacks=[checkpoint], validation_data={'input':val_ppl, 'softmax3':val_gt})
+model.fit({'input':train_ppl, 'softmax3':train_gt}, batch_size=256, nb_epoch=20, callbacks=[checkpoint, precision], validation_data={'input':val_ppl, 'softmax3':val_gt})
 #model.fit(train_ppl, train_gt, batch_size=256, nb_epoch=120, show_accuracy=True, callbacks=[checkpoint], validation_data=(val_ppl, val_gt))
 
 pre=model.predict({'input':val_ppl}, batch_size=128)
