@@ -196,6 +196,18 @@ class WeiboDataset():
   def max_len(self):
     return self._max_len
   
+  def f_ranks(self):
+    return self._f_ranks
+  
+  def c_ranks(self):
+    return self._c_ranks
+  
+  def l_ranks(self):
+    return self._l_ranks
+  
+  def max_ranks(self):
+    return max([len(self.f_ranks()), len(self.c_ranks()), len(self.l_ranks())])
+  
   def get_training_len(self):
     if self._train_reader is None:
       return 0
