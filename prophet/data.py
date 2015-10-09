@@ -404,7 +404,7 @@ class WeiboDataset():
     return self._ppl_idx_table.get_ppls_idx(l_data, lambda info: info[0])
 
   def get_ppl_training_data_np(self, start=None, end=None):
-    return np.array( self.get_ppl_training_data(start, end), dtype='int' )
+    return np.array( self.get_ppl_training_data(start, end), dtype='int32' )
 
   def get_ppl_training_data_matrix(self):  
     return WeiboMatrix(self, 
@@ -422,7 +422,7 @@ class WeiboDataset():
                         )
   
   def get_ppl_validation_data_np(self, start=None, end=None):
-    return np.array(self.get_ppl_validation_data(), dtype='int')
+    return np.array(self.get_ppl_validation_data(), dtype='int32')
   
   def get_ppl_validation_data_matrix(self):  
     return WeiboMatrix(self, 
@@ -440,7 +440,7 @@ class WeiboDataset():
                         )
   
   def get_ppl_predict_data_np(self, start=None, end=None):
-    return np.array(self.get_ppl_predict_data(start, end), dtype='int')
+    return np.array(self.get_ppl_predict_data(start, end), dtype='int32')
   
   def get_ppl_predict_data_matrix(self):  
     return WeiboMatrix(self, 
@@ -546,7 +546,15 @@ class WeiboDataset():
   
   def get_ranked_weighted_metric_np(self):
     f, c, l = self.get_ranked_weighted_metric()
-    return (np.array(f, dtype='int32'), np.array(c, dtype='int32'), np.array(l, dtype='int32')) 
+    return (np.array(f, dtype='int32'), np.array(c, dtype='int32'), np.array(l, dtype='int32'))
+  
+  def get_ranked_weighted_metric_matrix_np(self):
+    mat = np.zeros((3, self.max_ranks()), dtype='float32')
+    f, c, l = self.get_ranked_weighted_metric_np()
+    mat[0,0:f.shape[0]] = f
+    mat[1,0:c.shape[0]] = c
+    mat[2,0:l.shape[0]] = l
+    return mat
     
   def get_validation_data_gt(self, start=None, end=None, is_ranking=False):
     if self._train_reader is None:

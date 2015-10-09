@@ -1,6 +1,6 @@
 # vim: set fileencoding=utf-8 :
 #!/usr/bin/env python
-
+from __future__ import print_function
 import numpy as np
 import theano.tensor as T
 import keras
@@ -9,12 +9,20 @@ import theano
 import prophet.metric as me
 import time
 
+if theano.config.floatX == 'float64':
+    epsilon = 1.0e-9
+else:
+    epsilon = 1.0e-7
+
 thre = np.array([5.0,3.0,3.0], dtype='float32')
 weight_dev = np.array([0.5,0.25,0.25], dtype='float32')
 
+      
 class RankedWeiboLoss():
-  def __init__(self, dataset):
+  def __init__(self, dataset, is_combine_3=True):
     self._f, self._c, self._l = dataset.get_ranked_weighted_metric_np()
+    self._factors = dataset.get_ranked_weighted_metric_matrix_np()
+    self._is_combine_3 = is_combine_3
     
   def calculate_loss(self, y_true, y_pred):
     y_true_int = T.cast(y_true, dtype='int32')
@@ -23,6 +31,29 @@ class RankedWeiboLoss():
     s2 = T.constant(self._l, 'l')[y_true_int[:,2]]
     total = s0+s1+s2
     return T.switch(total > 100, 101, total+1)*(((y_pred-y_true)**2).sum(-1))
+  
+  def categorical_crossentropy(self, y_true, y_pred):
+    '''Expects a binary class matrix instead of a vector of scalar classes
+    '''
+    y_pred = T.clip(y_pred, epsilon, 1.0 - epsilon)
+    # scale preds so that the class probas of each sample sum to 1
+    y_pred /= y_pred.sum(axis=-1, keepdims=True)
+    if self._is_combine_3:
+      y_true = y_true.reshape((y_true.shape[0]/3, 3, y_true.shape[1]))
+      y_pred = y_pred.reshape((y_pred.shape[0]/3, 3, y_pred.shape[1]))
+    #y_true_argmax = y_true.argmax(axis=-1,  keepdims=True)
+#     s0 = T.constant(self._f, 'f')[y_true_argmax[:,0]]
+#     s1 = T.constant(self._c, 'c')[y_true_argmax[:,1]]
+#     s2 = T.constant(self._l, 'l')[y_true_argmax[:,2]]
+#     total = s0+s1+s2
+    #y_true = theano.printing.Print('y_true', global_fn=lambda a, b: print("y_true", y_true.dtype) )(y_true)
+    #y_pred = theano.printing.Print('y_pred', global_fn=lambda a, b: print("y_pred", y_pred.dtype) )(y_pred)
+    #y_true = theano.printing.Print('y_true')(y_true)
+    total = y_true * self._factors
+    total = total.sum(-1).sum(-1)
+    cce = T.nnet.categorical_crossentropy(y_pred, y_true).sum(-1)
+    #cce = -y_true * T.log(y_pred)
+    return (T.switch(total > 100, 101, total+1) * cce)
 
 def weibo_loss(y_true, y_pred):
     return ((T.abs_(y_pred - y_true)/(y_true+thre))**2).sum(-1)
@@ -100,7 +131,7 @@ def rank_limit(limit=1000, alpha=0.2, beta=5):
   return limit_list
 
 def to_categorical(gt, classes):
-  Y = np.zeros(gt.shape + (classes,))
+  Y = np.zeros(gt.shape + (classes,), dtype='float32')
   for row in range(gt.shape[0]):
     for col in range(gt.shape[1]):
       i = gt[row,col]

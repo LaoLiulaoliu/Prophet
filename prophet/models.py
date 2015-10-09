@@ -18,7 +18,7 @@ def weibo_act_zero(x):
 
 def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename = None, is_output=True, is_ranking = True):
   model = Sequential()
-  model.add(Embedding(max_ppl, dim_proj, init="uniform"))
+  model.add(Embedding(max_ppl, dim_proj, init="uniform", input_length=1))
   model.add(Dropout(0.7))
   model.add(Flatten())
   if is_output:
@@ -26,7 +26,7 @@ def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename 
       max_norm_v = 10
     else:
       max_norm_v = 1000
-    model.add(Dense(dim_proj, dim_output, init="uniform", activation=weibo_act_zero,
+    model.add(Dense(dim_output, init="uniform", activation=weibo_act_zero,
                   W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
   #else:
   #  model.add(Dense(dim_proj, 1024, init="uniform", activation="linear",
