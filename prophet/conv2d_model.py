@@ -107,6 +107,9 @@ model.compile(loss=loss_func, optimizer=sgd, other_func_init=build_precisio_stac
 #model.compile(loss="mse", optimizer=sgd, other_func_init=build_precisio_stack)#, theano_mode=theano.compile.MonitorMode(post_func=detect_nan).excluding(
     #'local_elemwise_fusion', 'inplace'))
 #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+#from pprint import pprint
+#pprint(model.get_config())
+  
 
 print("Traing the model")
 checkpoint = ModelCheckpoint(save_dir+"/conv2d_state.full_t.pkl", save_best_only=False)
