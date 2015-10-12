@@ -11,7 +11,7 @@ sys.path.insert(0, prophet_root)
 
 from keras.optimizers import SGD, RMSprop, Adagrad
 from keras.callbacks import ModelCheckpoint
-from prophet.common import weibo_loss, weibo_loss_weighted, weibo_loss_scaled_weighted, WeiboPrecisionCallback, build_precisio_stack
+from prophet.common import *
 
 from prophet.data import WeiboDataset
 from prophet.models import *
@@ -44,9 +44,9 @@ val_words = dataset.get_words_vec_validation_data_matrix()
 predict_words = dataset.get_words_vec_predict_data_matrix()
 
 print('Building the model')
-model = build_content_context_model_2_lstm()
+model = build_content_context_model_2_lstm(max_len = dataset.max_len())
 sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss=weibo_loss_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
+model.compile(loss=weibo_loss_total_scaled_weighted, optimizer=sgd, other_func_init=build_precisio_stack)
 #model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
 print("Traing the model")

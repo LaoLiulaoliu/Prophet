@@ -36,34 +36,46 @@ def build_ppl_context_model(max_ppl, dim_proj=300, dim_output=3, saved_filename 
   return model
 
 
-def build_content_context_model_2_lstm(in_dim=100, hidden1=512, hidden2=512, 
-        dense1=1024, dim_output=3, drop1=0.5, drop2=0.6, 
-        saved_filename = None, is_output=True):
+def build_content_context_model_2_lstm(in_dim=100, hidden1=1024, hidden2=1024, 
+        dense1=2048, dim_output=3, drop1=0.5, drop2=0.6, 
+        saved_filename = None, is_output=True, max_len=10):
+  
+  max_norm_v = 10
+  #if is_ranking:
+  #  max_norm_v = 1
+    
   model = Sequential()
-  model.add(LSTM(in_dim, hidden1, return_sequences=True))  # try using a GRU instead, for fun
+  model.add(LSTM(hidden1, input_dim=in_dim, return_sequences=True, input_length=max_len))  # try using a GRU instead, for fun
   model.add(Dropout(drop1))
-  model.add(LSTM(hidden1, hidden2, return_sequences=False))
+  model.add(LSTM(hidden2, return_sequences=False))
   model.add(Dropout(drop2))
-  model.add(Dense(hidden2, dense1, init='uniform', activation="linear",
-                  W_regularizer=l2(0.01)))
+  model.add(Dense(dense1, init='uniform', activation="linear",
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
+  model.add(Dropout(0.7))
   if is_output:
-    model.add(Dense(dense1, dim_output, init="uniform", activation="linear",
-                  W_regularizer=l2(0.01)))
+    max_norm_v=1000
+    model.add(Dense(dim_output, init="uniform", activation="linear",
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
   if saved_filename is not None and os.path.isfile(saved_filename):
     model.load_weights(saved_filename)
   return model
 
 def build_content_contex_model_lstm(in_dim=100, hidden1=512, dense1=1024, 
                                     dim_output=3, drop1=0.5,
-                                    saved_filename=None, is_output=True):
+                                    saved_filename=None, is_output=True, max_len=10):
+  max_norm_v = 10
+  #if is_ranking:
+  #  max_norm_v = 1
+  
   model = Sequential()
-  model.add(LSTM(in_dim, hidden1, return_sequences=False))  # try using a GRU instead, for fun
+  model.add(LSTM(hidden1, input_dim=in_dim, input_length=max_len, return_sequences=False))  # try using a GRU instead, for fun
   model.add(Dropout(drop1))
-  model.add(Dense(hidden1, dense1, init='uniform', activation="linear",
-                  W_regularizer=l2(0.01)))
+  model.add(Dense(dense1, init='uniform', activation="linear",
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
   if is_output:
-    model.add(Dense(dense1, dim_output, init="uniform", activation="linear",
-                  W_regularizer=l2(0.01)))
+    max_norm_v = 1000
+    model.add(Dense(dim_output, init="uniform", activation="linear",
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)))
   if saved_filename is not None and os.path.isfile(saved_filename):
     model.load_weights(saved_filename)
   return model
@@ -84,6 +96,7 @@ def build_combine_model(max_ppl, dim_proj=300, vec_dim=100,
   ppl_model.add(Flatten())
   
   dense1=2048
+  
   content_model = Sequential()
   content_model.add(LSTM(vec_dim, lstm_hidden, return_sequences=True))  # try using a GRU instead, for fun
   content_model.add(Dropout(0.2))

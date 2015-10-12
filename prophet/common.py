@@ -64,6 +64,11 @@ def weibo_loss_weighted(y_true, y_pred):
 def weibo_loss_scaled_weighted(y_true, y_pred):
   return (((T.abs_(y_pred - y_true)/(y_true+thre) * 10)**2)*weight_dev).sum(-1)
 
+def weibo_loss_total_scaled_weighted(y_true, y_pred):
+  total = y_true.sum(-1)
+  
+  return T.switch(total > 100, 101, total+1) *  weibo_loss_weighted(y_true, y_pred)
+
 def weibo_precision_loss(y_true, y_pred):
   devs = T.abs_(y_pred - y_true) / (y_true + thre) * weight_dev
   total_devs = devs.sum(-1)
