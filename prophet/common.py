@@ -53,7 +53,7 @@ class RankedWeiboLoss():
     total = total.sum(-1).sum(-1)
     cce = T.nnet.categorical_crossentropy(y_pred, y_true).sum(-1)
     #cce = -y_true * T.log(y_pred)
-    return (T.switch(total > 100, 101, total+1) * cce)
+    return (T.switch(total > 100, 101, total+1) *cce)
 
 def weibo_loss(y_true, y_pred):
     return ((T.abs_(y_pred - y_true)/(y_true+thre))**2).sum(-1)
@@ -67,7 +67,7 @@ def weibo_loss_scaled_weighted(y_true, y_pred):
 def weibo_loss_total_scaled_weighted(y_true, y_pred):
   total = y_true.sum(-1)
   
-  return T.switch(total > 100, 101, total+1) *  weibo_loss_weighted(y_true, y_pred)
+  return T.switch(total > 100, 101, total+1) * 10 * weibo_loss_weighted(y_true, y_pred)
 
 def weibo_precision_loss(y_true, y_pred):
   devs = T.abs_(y_pred - y_true) / (y_true + thre) * weight_dev

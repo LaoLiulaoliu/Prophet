@@ -156,7 +156,7 @@ class WeiboMatrix():
     if self._shape_func is None:
       return tuple([self.__len__()])
     else:
-      return tuple([self.__len__(), self._shape_func(self._dataset)])
+      return tuple([self.__len__()]) + self._shape_func(self._dataset)[1:]
       
 
 def l_slice_data(l_data, start, end):
@@ -449,26 +449,26 @@ class WeiboDataset():
                        lambda d, s, e: d.get_ppl_predict_data_np(s, e)  
                        )
   
-  def get_training_data_gt(self, start=None, end=None, is_ranking=False):
+  def get_training_data_gt(self, start=None, end=None, is_ranking=False, is_categorical=False):
     if self._train_reader is None:
       return []
     if self._is_init_all_tr:
-      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking)  
+      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking, is_categorical)  
               for info in l_slice_data(self._train_reader.data(), start, end)]
     else:
-      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking) 
+      return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking, is_categorical) 
                for info in l_slice_data(self._train_reader.get_training_data()
                                         , start, end)]
   
-  def get_training_data_gt_np(self, start=None, end=None, is_ranking=False):
-    return np.array(self.get_training_data_gt(start, end, is_ranking), 
+  def get_training_data_gt_np(self, start=None, end=None, is_ranking=False, is_categorical=False):
+    return np.array(self.get_training_data_gt(start, end, is_ranking, is_categorical), 
                     dtype='float32')
   
-  def get_training_data_gt_matrix(self, is_ranking=False):  
+  def get_training_data_gt_matrix(self, is_ranking=False, is_categorical=False):  
     return WeiboMatrix(self, 
                        lambda d: d.get_training_len(), 
-                       lambda d: d.get_training_data_gt_np(0,1).shape,
-                       lambda d, s, e: d.get_training_data_gt_np(s, e, is_ranking)  
+                       lambda d: d.get_training_data_gt_np(0,1, is_ranking, is_categorical).shape,
+                       lambda d, s, e: d.get_training_data_gt_np(s, e, is_ranking, is_categorical)  
                        )
 
   def translate_ranked_value(self, idx, type="forward"):
@@ -506,9 +506,23 @@ class WeiboDataset():
       l = self._l_ranks_np[l]
     
     return np.array([f,c,l]).transpose()
-    
+
+  def to_categorical(self, gt):
+    classes = self.max_ranks()
+    if type(gt) == list:
+      Y = np.zeros((len(gt), classes,), dtype='float32')
+      for row in range(len(gt)):
+          i = gt[row]
+          Y[row,i] = 1
+    else:
+      Y = np.zeros(gt.shape + (classes,), dtype='float32')
+      for row in range(gt.shape[0]):
+        for col in range(gt.shape[1]):
+          i = gt[row,col]
+          Y[row,col,i] = 1
+    return Y    
   
-  def get_ranked_value(self, f, c, l, is_ranking):
+  def get_ranked_value(self, f, c, l, is_ranking, is_categorical):
     if not is_ranking:
       return [f, c, l]
     
@@ -518,7 +532,10 @@ class WeiboDataset():
       c = search_rank_idx(c, self._c_ranks)
     if self._l_ranks is not None:
       l = search_rank_idx(l, self._l_ranks)
-    return [f, c, l]
+    if is_categorical:
+      return self.to_categorical([f, c, l])
+    else:
+      return [f, c, l]
 
   @staticmethod
   def _get_weighted_metric(ranks):
@@ -556,21 +573,21 @@ class WeiboDataset():
     mat[2,0:l.shape[0]] = l
     return mat
     
-  def get_validation_data_gt(self, start=None, end=None, is_ranking=False):
+  def get_validation_data_gt(self, start=None, end=None, is_ranking=False, is_categorical=False):
     if self._train_reader is None:
       return []
-    return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking) 
+    return [ self.get_ranked_value(info[3], info[4], info[5], is_ranking, is_categorical) 
              for info in l_slice_data(self._train_reader.get_validation_data(),
                                        start, end)]
   
-  def get_validation_data_gt_np(self, start=None, end=None, is_ranking=False):
-    return np.array(self.get_validation_data_gt(start, end, is_ranking), dtype='float32')
+  def get_validation_data_gt_np(self, start=None, end=None, is_ranking=False, is_categorical=False):
+    return np.array(self.get_validation_data_gt(start, end, is_ranking, is_categorical), dtype='float32')
   
-  def get_validation_data_gt_matrix(self, is_ranking=False):  
+  def get_validation_data_gt_matrix(self, is_ranking=False, is_categorical=False):  
     return WeiboMatrix(self, 
                        lambda d: d.get_validation_len(), 
-                       lambda d: d.get_validation_data_gt_np(0,1).shape,
-                       lambda d, s, e: d.get_validation_data_gt_np(s, e, is_ranking)  
+                       lambda d: d.get_validation_data_gt_np(0,1, is_ranking, is_categorical).shape,
+                       lambda d, s, e: d.get_validation_data_gt_np(s, e, is_ranking, is_categorical)  
                        )
   
   def get_missing_info(self, is_valid = True, is_predict = True, is_max_len = True, 
