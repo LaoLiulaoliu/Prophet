@@ -27,7 +27,7 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
 if is_ranking:
-  dataset = WeiboDataset(100, ranking_func=rank_limit)
+  dataset = WeiboDataset(10000, ranking_func=rank_limit)
 else:
   dataset = WeiboDataset(100000)
 print('Loading the data...')
@@ -50,18 +50,18 @@ train_gt = dataset.get_training_data_gt_matrix(is_ranking=is_ranking, is_categor
 #print(dataset.get_training_data_gt_np(0, is_ranking=is_ranking, is_categorical=is_categorical).shape)
 #print(train_gt[0])
 #print(train_gt[0].shape)
-#val_gt = dataset.get_validation_data_gt_matrix(is_ranking=is_ranking, is_categorical=is_categorical)
-val_gt = dataset.get_validation_data_gt_np(is_ranking=is_ranking, is_categorical=is_categorical)
+val_gt = dataset.get_validation_data_gt_matrix(is_ranking=is_ranking, is_categorical=is_categorical)
+#val_gt = dataset.get_validation_data_gt_np(is_ranking=is_ranking, is_categorical=is_categorical)
 print("The max len of words is: ", dataset.get_missing_info(is_valid=False, is_predict=False, is_max_len=True, is_print=False))
 
-#train_words = dataset.get_words_vec_training_data_matrix()
-train_words = dataset.get_words_vec_training_data_np()
+train_words = dataset.get_words_vec_training_data_matrix()
+#train_words = dataset.get_words_vec_training_data_np()
 #print(dataset.get_words_vec_training_data_np(0))
 #print(dataset.get_words_vec_training_data_np(0).shape)
 #print(train_words[0])
 #print(train_words[0].shape)
-#val_words = dataset.get_words_vec_validation_data_matrix()
-val_words = dataset.get_words_vec_validation_data_np()
+val_words = dataset.get_words_vec_validation_data_matrix()
+#val_words = dataset.get_words_vec_validation_data_np()
 predict_words = dataset.get_words_vec_predict_data_matrix()
 
 print('Building the model')
@@ -84,14 +84,17 @@ model.add_node(LSTM(1024, return_sequences=False), input='drop1', name='lstm2')
 model.add_node(Dropout(0.5), name='drop2', input='lstm2')
 model.add_node(Dense(4096, init='uniform', activation="relu",
                   W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='dense1', input='drop2')
-model.add_node(Dropout(0.7), name='drop3', input='dense1')
+model.add_node(Dropout(0.6), name='drop3', input='dense1')
+model.add_node(Dense(4096, init='uniform', activation="relu",
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='dense2', input='drop3')
+model.add_node(Dropout(0.6), name='drop4', input='dense2')
 max_ranks_len = dataset.max_ranks()
 model.add_node(Dense(max_ranks_len, init="normal", activation='softmax',
-                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_f', input='drop3')
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_f', input='drop4')
 model.add_node(Dense(max_ranks_len, init="normal", activation='softmax',
-                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_c', input='drop3')
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_c', input='drop4')
 model.add_node(Dense(max_ranks_len, init="normal", activation='softmax',
-                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_l', input='drop3')
+                  W_regularizer=l2(0.01), W_constraint = maxnorm(max_norm_v)), name='softmax_l', input='drop4')
 model.add_node(Reshape(dims=(3, max_ranks_len)), inputs=['softmax_f', 'softmax_c', 'softmax_l'], merge_mode='concat', concat_axis=1, name='softmax3_pre', create_output=False)
 model.add_output(input='softmax3_pre', name='softmax3')
 
