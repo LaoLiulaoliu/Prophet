@@ -182,7 +182,8 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
       start=time.time()
       if self._dataset_ranking is not None:
         y_pred = self._dataset_ranking.translate_ranking(np.int16(np.rint(self._y_pred)))
-        y = self._dataset_ranking.get_training_data_gt_np()
+        #y = self._dataset_ranking.get_training_data_gt_np()
+        y = self._dataset_ranking.translate_ranking(np.array(self._y, dtype='int32'))
       else:
         y_pred = self._y_pred
         y = self._y
@@ -192,6 +193,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     if is_val_on:
       traing_msg="training"
       start_val = time.time()
+      #print(logs['val_more_func_1'], logs['val_more_func_0'])
       #print(logs['val_more_func_1'], logs['val_more_func_0'])
       if self._dataset_ranking is not None:
         y_pred = self._dataset_ranking.translate_ranking(np.int16(np.rint(logs['val_more_func_0'])))
