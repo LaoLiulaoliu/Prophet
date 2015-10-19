@@ -145,7 +145,7 @@ def to_categorical(gt, classes):
 
 
 class WeiboPrecisionCallback(keras.callbacks.Callback):
-  def __init__(self, n_epoch_training = 10, n_epoch_test = 5, val_saved_filename=None, dataset_ranking = None):
+  def __init__(self, n_epoch_training = 10, n_epoch_test = 5, val_saved_filename=None, dataset_ranking = None, is_acc=False):
     super(WeiboPrecisionCallback, self).__init__()
     self._top_count = 0
     self._bottom_count = 0
@@ -155,6 +155,7 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
     self._n_epoch_test = n_epoch_test
     self._val_saved_filename = val_saved_filename
     self._dataset_ranking = dataset_ranking
+    self._is_acc = is_acc
      
   def on_epoch_begin(self, epoch, logs={}):
     self._top_count = 0
@@ -177,6 +178,15 @@ class WeiboPrecisionCallback(keras.callbacks.Callback):
       return
       
     print("Calculating the weibo precision...")
+    if self._is_acc:
+      if is_train_on:
+        acc=np.mean(np.equal(self._y_pred, self._y))
+        print("Training accuracy: ", acc)
+      if is_val_on:
+        acc=np.mean(np.equal(logs['val_more_func_1'], logs['val_more_func_0']))
+        print("validation accuracy: ", acc)
+      return
+    
     traing_msg=""
     if is_train_on:
       start=time.time()
