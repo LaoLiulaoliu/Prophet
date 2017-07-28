@@ -94,13 +94,15 @@ class WordVec(object):
             word_count = sum( [1 if word in one_bag else 0 for one_bag in bag_words] )
             return math.log( sample_num / (word_count + 1) )
 
-        return [inverse_frequency(word) for word, idx in vocabulary_dict.iteritems()]
+        idf_vector = [(inverse_frequency(word), idx) for word, idx in vocabulary_dict.iteritems()]
+        idf_vector.sort(key=lambda x: x[1])
+        return idf_vector
 
     def diagonal_idf_matrix(idf_vector):
         idf_len = len(idf_vector)
         idf_array = np.zeros((idf_len, idf_len))
         np.fill_diagonal(idf_array, idf_vector)
-        return np.mat(idf_matrix)
+        return np.mat(idf_array)
 
     def tf_idf(self):
         words, Y = self.load_words()
@@ -108,7 +110,7 @@ class WordVec(object):
         tf_matrix = np.mat(bag_words)
         idf_vector = self.inverse_doc_frequency(bag_words, vocabulary_dict)
         idf_matrix = self.diagonal_idf_matrix(idf_vector)
-        tf_idf_matrix = tf_matrix * idf_matrix
+        tf_idf_matrix = tf_matrix * idf_matrix # m X n, n X n, n: wordset length
         tf_idf_matrix_l2 = [l2_normalizer(vector.flatten().A[0]) for vector in tf_idf_matrix]
         return np.mat(tf_idf_matrix_l2)
 
