@@ -62,8 +62,8 @@ def train(N=806148):
             Yc.append( i[-2] )
             Yl.append( i[-1] )
         thetaf = stochastic_gradient_descent(np.mat(X), np.mat(Yf).T, thetaf, alpha)
-        thetac = stochastic_gradient_descent(np.mat(X), np.mat(Yc).T, thetaf, alpha)
-        thetal = stochastic_gradient_descent(np.mat(X), np.mat(Yl).T, thetaf, alpha)
+        thetac = stochastic_gradient_descent(np.mat(X), np.mat(Yc).T, thetac, alpha)
+        thetal = stochastic_gradient_descent(np.mat(X), np.mat(Yl).T, thetal, alpha)
 
         cnt += 1
         if cnt == limit:
